@@ -16,4 +16,5 @@ class Games(SqlAlchemyBase, SerializerMixin):
     description = sqlalchemy.Column(sqlalchemy.String, nullable=True)
     developers = sqlalchemy.Column(sqlalchemy.String, nullable=True)
     release_date = sqlalchemy.Column(sqlalchemy.Date, nullable=True)
+    ratio = sqlalchemy.Column(sqlalchemy.Float, nullable=True)
     is_selling = sqlalchemy.Column(sqlalchemy.Boolean, default=True)
