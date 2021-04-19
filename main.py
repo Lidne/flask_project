@@ -6,10 +6,11 @@ import flask
 import flask_login
 import flask_restful
 from data import db_session
-from data.forms import loginform
+from data.forms import loginform, registerform
 from data.users import User
-from data.games import Games
+from data.games import Game
 from data import users_resources
+from data import games_resources
 
 app = flask.Flask(__name__)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
@@ -24,7 +25,17 @@ def main():
     # доавляем api в приложение для использования в дальнейшем
     api.add_resource(users_resources.UsersListResource, '/api/users')
     api.add_resource(users_resources.UsersResource, '/api/users/<int:user_id>')
+    api.add_resource(games_resources.GamesListResource, '/api/games')
+    api.add_resource(games_resources.GamesResource, '/api/games/<int:game_id>')
     app.run()
+
+
+@app.route("/")
+def index():
+    games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
+    print(games)
+    return flask.render_template("index.html", games=games)
+
 
 
 @login_manager.user_loader
@@ -47,46 +58,38 @@ def login():
                                      form=form)
     return flask.render_template('login.html', title='Авторизация', form=form)
 
+
+
+@app.route('/register', methods=['GET', 'POST'])
+def reqister():
+    form = registerform.RegisterForm()
+    if form.validate_on_submit():
+        if form.password.data != form.password_again.data:
+            return flask.render_template('register.html', title='Регистрация',
+                                         form=form,
+                                         message="Пароли не совпадают")
+        db_sess = db_session.create_session()
+        if db_sess.query(User).filter(User.email == form.email.data).first():
+            return flask.render_template('register.html', title='Регистрация',
+                                         form=form,
+                                         message="Такой пользователь уже есть")
+        user = User(
+            nick=form.nick.data,
+            email=form.email.data,
+        )
+        user.set_password(form.password.data)
+        requests.post('http://127.0.0.1:5000/api/users', data=user.to_dict())
+        return flask.redirect('/login')
+    return flask.render_template('register.html', title='Регистрация', form=form)
+
+
+@app.route('/logout')
+@flask_login.login_required
+def logout():
+    flask_login.logout_user()
+    return flask.redirect("/")
+
 # всё это пока не нужно без шаблонов, так что пусть лежит
-# @app.route('/logout')
-# @flask_login.login_required
-# def logout():
-#     flask_login.logout_user()
-#     return flask.redirect("/")
-
-
-# @app.route("/")
-# def index():
-#     db_sess = db_session.create_session()
-#     games = db_sess.query(Games).all()
-#     return flask.render_template("index.html", games=games)
-
-
-# @app.route('/register', methods=['GET', 'POST'])
-# def reqister():
-#     form = flask_login.RegisterForm()
-#     if form.validate_on_submit():
-#         if form.password.data != form.password_again.data:
-#             return flask.render_template('register.html', title='Регистрация',
-#                                          form=form,
-#                                          message="Пароли не совпадают")
-#         db_sess = db_session.create_session()
-#         if db_sess.query(User).filter(User.email == form.email.data).first():
-#             return flask.render_template('register.html', title='Регистрация',
-#                                          form=form,
-#                                          message="Такой пользователь уже есть")
-#         user = User(
-#             name=form.name.data,
-#             email=form.email.data,
-#             about=form.about.data
-#         )
-#         user.set_password(form.password.data)
-#         db_sess.add(user)
-#         db_sess.commit()
-#         return flask.redirect('/login')
-#     return flask.render_template('register.html', title='Регистрация', form=form)
-
-
 # @app.route('/news/<int:id>', methods=['GET', 'POST'])
 # @flask_login.login_required
 # def edit_news(id):

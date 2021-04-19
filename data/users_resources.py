@@ -44,7 +44,6 @@ class UsersListResource(flask_restful.Resource):
     def post(self):
         """Функция добавляет нового пользователя по post запросу"""
         args = parser.parse_args()
-        print(args)
         session = db_session.create_session()
         user = User(
             nick=args['nick'],
