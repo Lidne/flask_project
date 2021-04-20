@@ -21,8 +21,8 @@ class GamesResource(flask_restful.Resource):
         session = db_session.create_session()
         user = session.query(Game).get(game_id)
         return flask.jsonify({'game': user.to_dict(
-            only=('id', 'name', 'price', 'description', 'developers',
-                  'release_date', 'ratio', 'is_selling', 'genre'))})
+            only=('id', 'name', 'price', 'description', 'developers', 'release_date',
+                  'ratio', 'is_selling', 'genre', 'img', 'img_wide'))})
 
     def delete(self, game_id):
         """Функция удаляет запись в бд по delete запросу"""
@@ -42,8 +42,10 @@ class GamesListResource(flask_restful.Resource):
         session = db_session.create_session()
         games = session.query(Game).all()
         return flask.jsonify({'games': [item.to_dict(
-            only=('id', 'name', 'price', 'description', 'developers',
-                  'release_date', 'ratio', 'is_selling', 'genre')) for item in games]})
+            only=(
+                'id', 'name', 'price', 'description', 'developers',
+                'release_date', 'ratio', 'is_selling', 'genre', 'img', 'img_wide'
+            )) for item in games]})
 
     def post(self):
         """Функция добавляет нового пользователя по post запросу"""
@@ -58,7 +60,9 @@ class GamesListResource(flask_restful.Resource):
             release_date=args['release_date'],
             ratio=args['ratio'],
             is_selling=args['is_selling'],
-            genre=args['genre']
+            genre=args['genre'],
+            img=args['img'],
+            img_wide=args['img_wide']
         )
         session.add(game)
         session.commit()

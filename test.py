@@ -1,5 +1,6 @@
 import requests
 import json
+import random
 from data.users import User
 
 
@@ -27,5 +28,9 @@ def add():
     print(res)
 
 
-add1()
+# add1()
 # print(requests.get('http://127.0.0.1:5000/api/games/1').json())
+games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
+home_games = list(filter(lambda x: x['img'] is not None, games))
+random.shuffle(home_games)
+print(home_games)
