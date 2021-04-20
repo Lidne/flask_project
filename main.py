@@ -58,7 +58,7 @@ def login():
         return flask.render_template('login.html',
                                      message="Неправильный логин или пароль",
                                      form=form)
-    return flask.render_template('login.html', title='Авторизация', form=form)
+    return flask.render_template('login.html')
 
 
 @app.route('/register', methods=['GET', 'POST'])
