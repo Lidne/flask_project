@@ -19,5 +19,7 @@ class Game(SqlAlchemyBase, SerializerMixin):
     ratio = sqlalchemy.Column(sqlalchemy.Float, nullable=True)
     is_selling = sqlalchemy.Column(sqlalchemy.Boolean, default=True)
     genre = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey("genres.id"), nullable=False)
+    img = sqlalchemy.Column(sqlalchemy.String, nullable=True)
+    img_wide = sqlalchemy.Column(sqlalchemy.String, nullable=True)
 
     genres = orm.relation("Genres", back_populates='games')

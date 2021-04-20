@@ -33,9 +33,11 @@ def main():
 @app.route("/")
 def index():
     games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
-    print(games)
-    return flask.render_template("index.html", games=games)
-
+    spin_games = list(filter(lambda x: x['img_wide'] is not None, games))
+    random.shuffle(spin_games)
+    home_games = list(filter(lambda x: x['img'] is not None, games))
+    random.shuffle(home_games)
+    return flask.render_template("index.html", spin_games=spin_games[:3], home_games=home_games[:5])
 
 
 @login_manager.user_loader
@@ -57,7 +59,6 @@ def login():
                                      message="Неправильный логин или пароль",
                                      form=form)
     return flask.render_template('login.html', title='Авторизация', form=form)
-
 
 
 @app.route('/register', methods=['GET', 'POST'])
