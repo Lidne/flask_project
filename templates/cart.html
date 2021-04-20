@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+<!--
+это заготовка для проверки работы функций, так что сделай по-человечески пж
+!-->
+{% block content %}
+{% if cart_list %}
+    {% for game in cart_list %}
+    <div class="container" style="background-color: #ffffff">
+        {{ game['name'] }}
+        <img src="{{ game['img'] }}">
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="container-lg" style="background-color: #ffffff">Тут ничего нет</div>
+{% endif %}
+{% endblock  %}

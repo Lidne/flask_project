@@ -40,10 +40,37 @@ def index():
     return flask.render_template("index.html", spin_games=spin_games[:3], home_games=home_games[:5])
 
 
-@login_manager.user_loader
-def load_user(user_id):
-    db_sess = db_session.create_session()
-    return db_sess.query(User).get(user_id)
+@app.route('/cart')
+def cart():
+    ids = flask.session.get('cart', None)
+    print(ids)
+    if ids is None:
+        cart_list = []
+    else:
+        games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
+        print(games)
+        cart_list = list(filter(lambda x: x['id'] in ids, games))
+        print(cart_list)
+    return flask.render_template('cart.html', cart_list=cart_list)
+
+
+# это функция для удаления новости из корзины
+# просто перенаправь на эту страницу по кнопке удалить из корзины
+@app.route('/cart_delete/<int:id>', methods=['GET', 'POST'])
+@flask_login.login_required
+def news_delete(id):
+    flask.session['cart'].pop(flask.session['cart'].find(id))
+    return flask.redirect('/cart')
+
+
+# это функция для добавление новости в корзину
+# просто перенаправь на эту страницу по кнопке добавить в корзину
+@app.route('/cart_add/<int:id>', methods=['GET', 'POST'])
+@flask_login.login_required
+def news_add(id):
+    if id not in flask.session['cart']:
+        flask.session['cart'].append(id)
+    return flask.redirect('/cart')
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -82,6 +109,12 @@ def reqister():
         requests.post('http://127.0.0.1:5000/api/users', data=user.to_dict())
         return flask.redirect('/login')
     return flask.render_template('register.html', title='Регистрация', form=form)
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    db_sess = db_session.create_session()
+    return db_sess.query(User).get(user_id)
 
 
 @app.route('/logout')
