@@ -1,15 +1,23 @@
 {% extends "base.html" %}
-<!--
-это заготовка для проверки работы функций, так что сделай по-человечески пж
-!-->
+
 {% block content %}
 {% if cart_list %}
-    {% for game in cart_list %}
-    <div class="container" style="background-color: #ffffff">
-        {{ game['name'] }}
-        <img src="{{ game['img'] }}">
-    </div>
-    {% endfor %}
+    <section class="home-games">
+        <div class="container-lg">
+            <div class="games-wrapper">
+                {% for j in cart_list %}
+                <div class="game-item">
+                    <a class="game-item-img" href="/">
+                        <img class="" src="{{ j['img'] }}">
+                    </a>
+                    <a href="/" class="game-item-name">{{ j['name'] }}</a>
+                    <div class="price"><b>{{ j['price'] }}$</b></div>
+                    <a href="/cart_delete/{{ j['id'] }}" class="btn btn-primary">Убрать</a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
 {% else %}
     <div class="container-lg" style="background-color: #ffffff">Тут ничего нет</div>
 {% endif %}

@@ -59,7 +59,7 @@ def cart():
 @app.route('/cart_delete/<int:id>', methods=['GET', 'POST'])
 @flask_login.login_required
 def news_delete(id):
-    flask.session['cart'].pop(flask.session['cart'].find(id))
+    flask.session['cart'].pop(flask.session['cart'].index(id))
     return flask.redirect('/cart')
 
 
@@ -87,6 +87,7 @@ def login():
                                      form=form)
     return flask.render_template('login.html')
 
+
 @app.route('/register', methods=['GET', 'POST'])
 def reqister():
     form = registerform.RegisterForm()
@@ -108,6 +109,14 @@ def reqister():
         requests.post('http://127.0.0.1:5000/api/users', data=user.to_dict())
         return flask.redirect('/login')
     return flask.render_template('register.html', title='Регистрация', form=form)
+
+
+@app.route('/list')
+def game_list():
+    games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
+    games_list = list(filter(lambda x: x['img'] is not None, games))
+    random.shuffle(games_list)
+    return flask.render_template('list.html', games_list=games_list)
 
 
 @login_manager.user_loader
