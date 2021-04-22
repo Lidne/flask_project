@@ -71,6 +71,8 @@ def cart_delete(id):
 @app.route('/cart_add/<int:id>', methods=['GET', 'POST'])
 @flask_login.login_required
 def cart_add(id):
+    if 'cart' not in flask.session:
+        flask.session['cart'] = [id]
     if id not in flask.session['cart']:
         flask.session['cart'].append(id)
     return flask.redirect('/cart')
