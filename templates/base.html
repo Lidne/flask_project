@@ -26,7 +26,7 @@
           <a class="nav-link active" aria-current="page" href="/">ГЛАВНАЯ</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="/recommended">РЕКОМЕНДАЦИИ</a>
+          <a class="nav-link" href="/list">РЕКОМЕНДАЦИИ</a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="/cart">КОРЗИНА</a>
@@ -41,9 +41,12 @@
     </div>
   </div>
   <div class="reg_but">
-  <a class="btn btn-primary" href="/register">Зарегистрироваться</a>
-	<a class="btn btn-primary" href="/login">Войти</a>
-  <a class="btn btn-primary" href="/logout">Выйти</a>
+      {% if current_user.is_authenticated %}
+            <a class="btn btn-primary" href="/logout">{{ current_user.nick }}</a>
+      {% else %}
+        <a class="btn btn-primary" href="/register">Зарегистрироваться</a>
+        <a class="btn btn-primary" href="/login">Войти</a>
+      {% endif %}
 </div>
 </nav>
 	</header>

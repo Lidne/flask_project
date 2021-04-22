@@ -1,10 +1,11 @@
 import datetime
 import random
-import requests 
+import requests
 
 import flask
 import flask_login
 import flask_restful
+from flask_login import current_user
 from flask import request
 from data import db_session
 from data.forms import loginform, registerform
@@ -13,7 +14,6 @@ from data.games import Game
 from data import users_resources
 from data import games_resources
 from werkzeug.security import generate_password_hash, check_password_hash
-
 
 app = flask.Flask(__name__)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
@@ -46,14 +46,11 @@ def index():
 @app.route('/cart')
 def cart():
     ids = flask.session.get('cart', None)
-    print(ids)
     if ids is None:
         cart_list = []
     else:
         games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
-        print(games)
         cart_list = list(filter(lambda x: x['id'] in ids, games))
-        print(cart_list)
     return flask.render_template('cart.html', cart_list=cart_list)
 
 
@@ -61,7 +58,7 @@ def cart():
 # просто перенаправь на эту страницу по кнопке удалить из корзины
 @app.route('/cart_delete/<int:id>', methods=['GET', 'POST'])
 @flask_login.login_required
-def news_delete(id):
+def cart_delete(id):
     flask.session['cart'].pop(flask.session['cart'].index(id))
     return flask.redirect('/cart')
 
@@ -70,10 +67,16 @@ def news_delete(id):
 # просто перенаправь на эту страницу по кнопке добавить в корзину
 @app.route('/cart_add/<int:id>', methods=['GET', 'POST'])
 @flask_login.login_required
-def news_add(id):
+def cart_add(id):
     if id not in flask.session['cart']:
         flask.session['cart'].append(id)
     return flask.redirect('/cart')
+
+
+@app.route('/<int:game_id>')
+def game(game_id):
+    res = requests.get(f'http://127.0.0.1:5000/api/games/{game_id}').json()['game']
+    return flask.render_template('game.html', game=res)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -110,7 +113,7 @@ def register():
         )
         user.set_password(form.password.data)
         requests.post('http://127.0.0.1:5000/api/users', data=user.to_dict())
-        return flask.redirect('/')
+        return flask.redirect('/login')
     return flask.render_template('register.html', title='Регистрация', form=form)
 
 
@@ -140,59 +143,18 @@ def logout():
 @flask_login.login_required
 def admin():
     return flask.redirect('list')
-# всё это пока не нужно без шаблонов, так что пусть лежит
-# @app.route('/news/<int:id>', methods=['GET', 'POST'])
-# @flask_login.login_required
-# def edit_news(id):
-#     form = JobsForm()
-#     if flask.request.method == "GET":
-#         db_sess = db_session.create_session()
-#         news = db_sess.query(Games).filter(Games.id == id,
-#                                           Games.user == flask_login.current_user
-#                                           ).first()
-#         if news:
-#             form.title.data = news.title
-#             form.content.data = news.content
-#             form.is_private.data = news.is_private
-#         else:
-#             flask.abort(404)
-#     if form.validate_on_submit():
-#         db_sess = db_session.create_session()
-#         news = db_sess.query(Games).filter(Games.id == id,
-#                                           Games.user == flask_login.current_user
-#                                           ).first()
-#         if news:
-#             news.title = form.title.data
-#             news.content = form.content.data
-#             news.is_private = form.is_private.data
-#             db_sess.commit()
-#             return flask.redirect('/')
-#         else:
-#             flask.abort(404)
-#     return flask.render_template('jobs.html',
-#                                  title='Редактирование новости',
-#                                  form=form
-#                                  )
-
-
-# @app.route('/news_delete/<int:id>', methods=['GET', 'POST'])
-# @flask_login.login_required
-# def news_delete(id):
-#     db_sess = db_session.create_session()
-#     news = db_sess.query(Games).filter(Games.id == id,
-#                                       Games.user == flask_login.current_user
-#                                       ).first()
-#     if news:
-#         db_sess.delete(news)
-#         db_sess.commit()
-#     else:
-#         flask.abort(404)
-#     return flask.redirect('/')
 
 
 @app.errorhandler(404)
 def not_found(error):
-    return flask.make_response(flask.jsonify({'error': 'Not found'}), 404)
+    return flask.render_template('error.html', error=str(error), code='404',
+                                 image='/static/img/brand/error_icon.png'), 404
+
+
+@app.errorhandler(500)
+def server_error(error):
+    return flask.render_template('error.html', error=str(error), code='500',
+                                 image='/static/img/brand/cloud_icon.png'), 500
 
 
 if __name__ == '__main__':
