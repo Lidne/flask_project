@@ -17,6 +17,7 @@ class GamesResource(flask_restful.Resource):
 
     def get(self, game_id):
         """Функция возвращает ответ на get запрос"""
+
         abort_if_user_not_found(game_id)
         session = db_session.create_session()
         user = session.query(Game).get(game_id)
@@ -26,6 +27,7 @@ class GamesResource(flask_restful.Resource):
 
     def delete(self, game_id):
         """Функция удаляет запись в бд по delete запросу"""
+
         abort_if_user_not_found(game_id)
         session = db_session.create_session()
         game = session.query(Game).get(game_id)
@@ -39,6 +41,7 @@ class GamesListResource(flask_restful.Resource):
 
     def get(self):
         """Функция возвращает ответ на get запрос"""
+
         session = db_session.create_session()
         games = session.query(Game).all()
         return flask.jsonify({'games': [item.to_dict(
@@ -49,6 +52,7 @@ class GamesListResource(flask_restful.Resource):
 
     def post(self):
         """Функция добавляет нового пользователя по post запросу"""
+
         args = parser_games.parse_args()
         print(args)
         session = db_session.create_session()
