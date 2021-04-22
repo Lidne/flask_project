@@ -59,7 +59,10 @@ def cart():
 @app.route('/cart_delete/<int:id>', methods=['GET', 'POST'])
 @flask_login.login_required
 def cart_delete(id):
-    flask.session['cart'].pop(flask.session['cart'].index(id))
+    if id == 0:
+        flask.session['cart'].clear()
+    else:
+        flask.session['cart'].pop(flask.session['cart'].index(id))
     return flask.redirect('/cart')
 
 
