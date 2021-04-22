@@ -14,7 +14,7 @@
 	<nav class="navbar navbar-expand-lg navbar-light bg-secondary">
   <div class="container-xxl">
     <a class="navbar-brand" href="/">
-      <img src="static/img/brand/logo.svg" alt="" width="30" height="24" class="d-inline-block align-text-top brand">
+      <img src="static/img/GUTS_FLEX.gif" alt="" width="30" height="24" class="d-inline-block align-text-top brand">
       ABOBA SHOP
     </a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -26,10 +26,10 @@
           <a class="nav-link active" aria-current="page" href="/">ГЛАВНАЯ</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="/recomended">РЕКОМЕНДАЦИИ</a>
+          <a class="nav-link" href="/recommended">РЕКОМЕНДАЦИИ</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="/buyit">КОРЗИНА</a>
+          <a class="nav-link" href="/cart">КОРЗИНА</a>
         </li>
       </ul>
       <div class="position-absolute start-50">
@@ -96,10 +96,10 @@
 	 	<div class="container-lg">
 	 		<div class="swiper-menu">
 	 			<div class="swiper-wrapper">
-	 				<a href="" class="menu_elem mx-5"><span>Новинки</span></a>
-	 				<a href="" class="menu_elem mx-5"><span>Лидеры продаж</span></a>
-	 				<a href="" class="menu_elem mx-5"><span>Популярное</span></a>
-	 				<a href="" class="menu_elem mx-5"><span>Предзаказы</span></a>
+	 				<a href="/list" class="menu_elem mx-5"><span>Новинки</span></a>
+	 				<a href="/list" class="menu_elem mx-5"><span>Лидеры продаж</span></a>
+	 				<a href="/list" class="menu_elem mx-5"><span>Популярное</span></a>
+	 				<a href="/list" class="menu_elem mx-5"><span>Предзаказы</span></a>
 	 			</div>
 	 		</div>
 	 		
@@ -113,16 +113,16 @@
 	 				<a class="game-item-img" href="/">
 	 					<img class="" src="{{ j['img'] }}">
 	 				</a>
-	 					<a href="/" class="game-item-name">{{ j['name'] }}</a>
+	 					<a href="/{{j['id']}}" class="game-item-name">{{ j['name'] }}</a>
 	 					<div class="price"><b>{{ j['price'] }}$</b></div>
-	 					<a href="" class="btn btn-primary">В корзину</a>
+	 					<a href="/cart_add/{{j['id']}}" class="btn btn-primary">В корзину</a>
 	 			</div>
 				{% endfor %}
 	 		</div>
 	 	<div align="center">
-	 		<div class="btn btn-primary btn-all">Смотреть все</div>
+	 		<a href="/list" class="btn btn-primary btn-all">Смотреть все</a>
 	 	</div>
-	 	
+
 	 	</div>
 	 </section>
 <!--

@@ -5,6 +5,7 @@ import requests
 import flask
 import flask_login
 import flask_restful
+from werkzeug.exceptions import InternalServerError, NotFound
 from data import db_session
 from data.forms import loginform, registerform
 from data.users import User
@@ -40,34 +41,38 @@ def index():
     return flask.render_template("index.html", spin_games=spin_games[:3], home_games=home_games[:5])
 
 
+@app.route('/<int:game_id>')
+def game(game_id):
+    res = requests.get(f'http://127.0.0.1:5000/api/games/{game_id}').json()['game']
+    return flask.render_template('game.html', game=res)
+
+
 @app.route('/cart')
 def cart():
     ids = flask.session.get('cart', None)
-    print(ids)
     if ids is None:
         cart_list = []
     else:
         games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
-        print(games)
         cart_list = list(filter(lambda x: x['id'] in ids, games))
-        print(cart_list)
     return flask.render_template('cart.html', cart_list=cart_list)
 
 
-# это функция для удаления новости из корзины
-# просто перенаправь на эту страницу по кнопке удалить из корзины
 @app.route('/cart_delete/<int:id>', methods=['GET', 'POST'])
 @flask_login.login_required
 def news_delete(id):
-    flask.session['cart'].pop(flask.session['cart'].index(id))
+    """Функция для удаления новости из корзины"""
+    if id in flask.session['cart']:
+        flask.session['cart'].pop(flask.session['cart'].index(id))
+    elif id == 0:
+        flask.session['cart'].clear()
     return flask.redirect('/cart')
 
 
-# это функция для добавление новости в корзину
-# просто перенаправь на эту страницу по кнопке добавить в корзину
 @app.route('/cart_add/<int:id>', methods=['GET', 'POST'])
 @flask_login.login_required
 def news_add(id):
+    """Функция для добавление новости в корзину"""
     if id not in flask.session['cart']:
         flask.session['cart'].append(id)
     return flask.redirect('/cart')
@@ -75,6 +80,7 @@ def news_add(id):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    """Функция для логина пользователя"""
     form = loginform.LoginForm()
     if form.validate_on_submit():
         db_sess = db_session.create_session()
@@ -89,7 +95,8 @@ def login():
 
 
 @app.route('/register', methods=['GET', 'POST'])
-def reqister():
+def register():
+    """Функция для регистрации пользователей"""
     form = registerform.RegisterForm()
     if form.validate_on_submit():
         if form.password.data != form.password_again.data:
@@ -113,6 +120,7 @@ def reqister():
 
 @app.route('/list')
 def game_list():
+    """Функция выводит список игр"""
     games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
     games_list = list(filter(lambda x: x['img'] is not None, games))
     random.shuffle(games_list)
@@ -131,59 +139,17 @@ def logout():
     flask_login.logout_user()
     return flask.redirect("/")
 
-# всё это пока не нужно без шаблонов, так что пусть лежит
-# @app.route('/news/<int:id>', methods=['GET', 'POST'])
-# @flask_login.login_required
-# def edit_news(id):
-#     form = JobsForm()
-#     if flask.request.method == "GET":
-#         db_sess = db_session.create_session()
-#         news = db_sess.query(Games).filter(Games.id == id,
-#                                           Games.user == flask_login.current_user
-#                                           ).first()
-#         if news:
-#             form.title.data = news.title
-#             form.content.data = news.content
-#             form.is_private.data = news.is_private
-#         else:
-#             flask.abort(404)
-#     if form.validate_on_submit():
-#         db_sess = db_session.create_session()
-#         news = db_sess.query(Games).filter(Games.id == id,
-#                                           Games.user == flask_login.current_user
-#                                           ).first()
-#         if news:
-#             news.title = form.title.data
-#             news.content = form.content.data
-#             news.is_private = form.is_private.data
-#             db_sess.commit()
-#             return flask.redirect('/')
-#         else:
-#             flask.abort(404)
-#     return flask.render_template('jobs.html',
-#                                  title='Редактирование новости',
-#                                  form=form
-#                                  )
-
-
-# @app.route('/news_delete/<int:id>', methods=['GET', 'POST'])
-# @flask_login.login_required
-# def news_delete(id):
-#     db_sess = db_session.create_session()
-#     news = db_sess.query(Games).filter(Games.id == id,
-#                                       Games.user == flask_login.current_user
-#                                       ).first()
-#     if news:
-#         db_sess.delete(news)
-#         db_sess.commit()
-#     else:
-#         flask.abort(404)
-#     return flask.redirect('/')
-
 
 @app.errorhandler(404)
 def not_found(error):
-    return flask.make_response(flask.jsonify({'error': 'Not found'}), 404)
+    return flask.render_template('error.html', error=str(error), code='404',
+                                 image='/static/img/brand/error_icon.png'), 404
+
+
+@app.errorhandler(500)
+def server_error(error):
+    return flask.render_template('error.html', error=str(error), code='500',
+                                 image='/static/img/brand/cloud_icon.png'), 500
 
 
 if __name__ == '__main__':
