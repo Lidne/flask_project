@@ -2,6 +2,10 @@
 
 {% block content %}
 {% if cart_list %}
+<center>
+    <a href="/buy" class="btn btn-primary btn-all">Купить</a>
+    
+</center>
     <section class="home-games">
         <div class="container-lg">
             <div class="games-wrapper">
@@ -18,7 +22,14 @@
             </div>
         </div>
     </section>
+<center>
+    <a href="/cart_delete/0" class="btn btn-primary btn-all">Отчистить корзину</a>
+</center>
 {% else %}
-    <div class="container-lg" style="background-color: #ffffff">Тут ничего нет</div>
+    <center>
+        <div style="margin: 17.5%;">
+            <a href="/" class="btn btn-primary">Тут ничего нет</a>
+        </div>
+    </center>
 {% endif %}
-{% endblock  %}
+{% endblock %}
