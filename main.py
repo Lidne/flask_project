@@ -147,7 +147,7 @@ def logout():
 @app.route('/admin')
 @flask_login.login_required
 def admin():
-    return flask.redirect('list')
+    return flask.render_template('paymant.html')
 
 
 @app.errorhandler(404)
