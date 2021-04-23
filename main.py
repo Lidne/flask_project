@@ -1,10 +1,12 @@
 import datetime
 import random
 import requests
+import string
 
 import flask
 import flask_login
 import flask_restful
+from flask_ngrok import run_with_ngrok
 from flask_login import current_user
 from flask import request
 from data import db_session
@@ -20,6 +22,7 @@ app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
 api = flask_restful.Api(app)
 login_manager = flask_login.LoginManager(app)
 login_manager.init_app(app)
+run_with_ngrok(app)
 
 
 def main():
@@ -59,11 +62,22 @@ def cart():
 @app.route('/cart_delete/<int:id>', methods=['GET', 'POST'])
 @flask_login.login_required
 def cart_delete(id):
-    if id == 0:
-        flask.session['cart'].clear()
+    cart1 = flask.session.get('cart', None)
+    if cart1 is not None:
+        if id == 0:
+            cart1.clear()
+        else:
+            cart1.pop(flask.session['cart'].index(id))
     else:
-        flask.session['cart'].pop(flask.session['cart'].index(id))
-    return flask.redirect('/cart')
+        cart1 = []
+    flask.session['cart'] = cart1
+    return flask.redirect(redirect_url())
+
+
+def redirect_url(default='index'):
+    return request.args.get('next') or \
+           request.referrer or \
+           flask.url_for(default)
 
 
 # это функция для добавление новости в корзину
@@ -71,10 +85,12 @@ def cart_delete(id):
 @app.route('/cart_add/<int:id>', methods=['GET', 'POST'])
 @flask_login.login_required
 def cart_add(id):
-    if 'cart' not in flask.session:
-        flask.session['cart'] = [id]
-    if id not in flask.session['cart']:
-        flask.session['cart'].append(id)
+    cart1 = flask.session.get('cart', None)
+    if cart1 is None:
+        cart1 = [id]
+    elif id not in cart1:
+        cart1.append(id)
+    flask.session['cart'] = cart1
     return flask.redirect('/cart')
 
 
@@ -144,10 +160,36 @@ def logout():
     return flask.redirect("/login")
 
 
-@app.route('/admin')
+@app.route('/buy')
 @flask_login.login_required
-def admin():
-    return flask.render_template('paymant.html')
+def buy():
+    ids = flask.session.get('cart', None)
+    if ids is not None:
+        games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
+        cart_list = list(filter(lambda x: x['id'] in ids, games))
+        total = sum(list(map(lambda x: x['price'], cart_list)))
+        return flask.render_template('payment.html', cart_list=cart_list, total=total)
+
+
+@app.route('/goods')
+@flask_login.login_required
+def goods():
+    ids = flask.session.get('cart', None)
+    if ids is not None:
+        games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
+        games = list(filter(lambda x: x['id'] in ids, games))
+        text = list(string.ascii_uppercase + string.digits)
+        for i in range(len(games)):
+            random.shuffle(text)
+            games[i]['code'] = ''.join(text[:7])
+    cart_delete(0)
+    return flask.render_template('goods.html', games=games)
+
+
+@app.errorhandler(401)
+def not_found(error):
+    return flask.render_template('unauthorised.html', code='401',
+                                 image='/static/img/brand/auth_icon.png'), 401
 
 
 @app.errorhandler(404)
