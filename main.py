@@ -2,6 +2,7 @@ import datetime
 import random
 import requests
 import string
+import Levenshtein
 
 import flask
 import flask_login
@@ -10,20 +11,26 @@ from flask_ngrok import run_with_ngrok
 from flask_login import current_user
 from flask import request
 from data import db_session
-from data.forms import loginform, registerform
+from data.forms import loginform, registerform, searchform
 from data.users import User
 from data.games import Game
 from data.genres import Genres
 from data import users_resources
 from data import games_resources
-from werkzeug.security import generate_password_hash, check_password_hash
 
 app = flask.Flask(__name__)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
 api = flask_restful.Api(app)
 login_manager = flask_login.LoginManager(app)
 login_manager.init_app(app)
-run_with_ngrok(app)
+# run_with_ngrok(app)
+
+"""Если у вас не запускается проект, то необходимо скачать python-Levenshtein
+Вот ссылка: http://www.lfd.uci.edu/~gohlke/pythonlibs/#python-levenshtein.
+Выберите последнюю версию, подходящую под вашу систему (32 или 64 бит).
+После загрузки необходимо перейти в директорию, где лежит скачаный файл и запустить
+через консоль команду: pip install <название скачанного файла>.
+Без этого поиск по играм не заработает, а через репо устанавливать бесполезно"""
 
 
 def main():
@@ -44,7 +51,17 @@ def index():
     random.shuffle(spin_games)
     home_games = list(filter(lambda x: x['img'] is not None, games))
     random.shuffle(home_games)
-    return flask.render_template("index.html", spin_games=spin_games[:3], home_games=home_games[:5])
+    return flask.render_template("index.html", spin_games=spin_games[:3], home_games=home_games[:4])
+
+
+@app.route('/list', methods=['GET', 'POST'])
+def game_list():
+    form = searchform.SearchForm()
+    games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
+    games_list = list(filter(lambda x: x['img'] is not None, games))
+    searcher(form)
+    random.shuffle(games_list)
+    return flask.render_template('list.html', games_list=games_list, form=form)
 
 
 @app.route('/cart')
@@ -58,10 +75,7 @@ def cart():
     return flask.render_template('cart.html', cart_list=cart_list)
 
 
-# это функция для удаления новости из корзины
-# просто перенаправь на эту страницу по кнопке удалить из корзины
 @app.route('/cart_delete/<int:id>', methods=['GET', 'POST'])
-@flask_login.login_required
 def cart_delete(id):
     cart1 = flask.session.get('cart', None)
     if cart1 is not None:
@@ -81,10 +95,7 @@ def redirect_url(default='index'):
            flask.url_for(default)
 
 
-# это функция для добавление новости в корзину
-# просто перенаправь на эту страницу по кнопке добавить в корзину
 @app.route('/cart_add/<int:id>', methods=['GET', 'POST'])
-@flask_login.login_required
 def cart_add(id):
     cart1 = flask.session.get('cart', None)
     if cart1 is None:
@@ -141,33 +152,11 @@ def register():
     return flask.render_template('register.html', title='Регистрация', form=form)
 
 
-@app.route('/list')
-@flask_login.login_required
-def game_list():
-    games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
-    games_list = list(filter(lambda x: x['img'] is not None, games))
-    random.shuffle(games_list)
-    return flask.render_template('list.html', games_list=games_list)
-
-
-@login_manager.user_loader
-def load_user(user_id):
-    db_sess = db_session.create_session()
-    return db_sess.query(User).get(user_id)
-
-
-@app.route('/logout')
-@flask_login.login_required
-def logout():
-    flask_login.logout_user()
-    return flask.redirect("/login")
-
-
 @app.route('/buy')
 @flask_login.login_required
 def buy():
     ids = flask.session.get('cart', None)
-    if ids is not None:
+    if ids is not None and ids:
         games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
         cart_list = list(filter(lambda x: x['id'] in ids, games))
         total = sum(list(map(lambda x: x['price'], cart_list)))
@@ -185,8 +174,29 @@ def goods():
         for i in range(len(games)):
             random.shuffle(text)
             games[i]['code'] = ''.join(text[:7])
-    cart_delete(0)
-    return flask.render_template('goods.html', games=games)
+        cart_delete(0)
+        return flask.render_template('goods.html', games=games)
+
+
+def searcher(form):
+    games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
+    games_list = list(filter(lambda x: x['img'] is not None, games))
+    if request.method == 'POST':
+        matched_game = min(games_list, key=lambda x: Levenshtein.distance(form.search.data, x['name']))
+        flask.redirect(f'/{matched_game["id"]}')
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    db_sess = db_session.create_session()
+    return db_sess.query(User).get(user_id)
+
+
+@app.route('/logout')
+@flask_login.login_required
+def logout():
+    flask_login.logout_user()
+    return flask.redirect("/login")
 
 
 @app.errorhandler(401)
