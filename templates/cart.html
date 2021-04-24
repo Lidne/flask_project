@@ -4,6 +4,7 @@
 {% if cart_list %}
 <center>
     <a href="/buy" class="btn btn-primary btn-all">Купить</a>
+    
 </center>
     <section class="home-games">
         <div class="container-lg">
@@ -14,7 +15,7 @@
                         <img class="" src="{{ j['img'] }}">
                     </a>
                     <a href="/{{j['id']}}" class="game-item-name">{{ j['name'] }}</a>
-                    <div class="price"><b>{{ j['price'] }} р.</b></div>
+                    <div class="price"><b>{{ j['price'] }}$</b></div>
                     <a href="/cart_delete/{{ j['id'] }}" class="btn btn-primary">Убрать</a>
                 </div>
                 {% endfor %}

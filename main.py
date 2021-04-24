@@ -44,7 +44,7 @@ def index():
     random.shuffle(spin_games)
     home_games = list(filter(lambda x: x['img'] is not None, games))
     random.shuffle(home_games)
-    return flask.render_template("index.html", spin_games=spin_games[:3], home_games=home_games[:4])
+    return flask.render_template("index.html", spin_games=spin_games[:3], home_games=home_games[:5])
 
 
 @app.route('/cart')
@@ -100,8 +100,7 @@ def game(game_id):
     sess = db_session.create_session()
     res = requests.get(f'http://127.0.0.1:5000/api/games/{game_id}').json()['game']
     res['genre'] = sess.query(Genres.genre).filter(res['genre'] == Genres.id).first()[0]
-    print(res)
-    return flask.render_template('game.html', game=res)
+    return flask.render_template('product.html', game=res)
 
 
 @app.route('/login', methods=['GET', 'POST'])
