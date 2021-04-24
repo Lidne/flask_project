@@ -11,7 +11,11 @@
                 </a>
                 <a href="/{{j['id']}}" class="game-item-name">{{ j['name'] }}</a>
                 <div class="price"><b>{{ j['price'] }}$</b></div>
-                <a href="" class="btn btn-primary">В корзину</a>
+                {% if j['id'] in cart %}
+                    <a href="/cart_add/{{j['id']}}" class="btn btn-primary">В корзину</a>
+                {% else %}
+                    <a href="/cart" class="btn btn-primary">Добавлено</a>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
