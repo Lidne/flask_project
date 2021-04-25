@@ -10,7 +10,7 @@
   </div>
     <div class="carousel-inner">
    <div class="carousel-item active" data-bs-interval="4000">
-       <a href="/{{spin_games[0]['id']}}"><img src="{{ spin_games[0]['img_wide'] }}" class="d-block w-100" alt="..."></a>
+       <a href="/{{spin_games[0]['id']}}"><img src="{{ spin_games[0]['img_wide'] }}" class="d-block w-100 wideimg" alt="..."></a>
       <div class="carousel-caption d-none d-md-block">
         <h5 class="display-2 sekiro">{{ spin_games[0]['name'] }}</h5>
         <p>{{ spin_games[0]['description'] }}</p>
@@ -18,7 +18,7 @@
       </div>
     </div>
     <div class="carousel-item" data-bs-interval="4000">
-        <a href=""><img src="{{ spin_games[1]['img_wide'] }}" class="d-block w-100" alt="..."></a>
+        <a href=""><img src="{{ spin_games[1]['img_wide'] }}" class="d-block w-100 wideimg" alt="..."></a>
       <div class="carousel-caption d-none d-md-block">
         <h5 class="display-2 btl-2">{{ spin_games[1]['name'] }}</h5>
         <p>{{ spin_games[1]['description'] }}</p>
@@ -26,7 +26,7 @@
       </div>
     </div>
     <div class="carousel-item" data-bs-interval="4000">
-        <a href="/{{spin_games[2]['id']}}"><img src="{{ spin_games[2]['img_wide'] }}" class="d-block w-100" alt="..."></a>
+        <a href="/{{spin_games[2]['id']}}"><img src="{{ spin_games[2]['img_wide'] }}" class="d-block w-100 wideimg" alt="..."></a>
       <div class="carousel-caption d-none d-md-block">
         <h5 class="display-2 witcher">{{ spin_games[2]['name'] }}</h5>
         <p>{{ spin_games[2]['description'] }}</p>
@@ -66,7 +66,7 @@
 				{% for j in home_games %}
 	 			<div class="game-item">
 	 				<a class="game-item-img" href="/">
-	 					<img class="" src="{{ j['img'] }}">
+	 					<img class="postimg" src="{{ j['img'] }}">
 	 				</a>
 	 					<a href="/{{j['id']}}" class="game-item-name">{{ j['name'] }}</a>
 	 					<div class="price"><b>{{ j['price'] }} р.</b></div>

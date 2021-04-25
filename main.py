@@ -10,7 +10,7 @@ from flask_ngrok import run_with_ngrok
 from flask_login import current_user
 from flask import request
 from data import db_session
-from data.forms import loginform, registerform
+from data.forms import loginform, registerform, gayform
 from data.users import User
 from data.games import Game
 from data.genres import Genres
@@ -187,6 +187,33 @@ def goods():
             games[i]['code'] = ''.join(text[:7])
     cart_delete(0)
     return flask.render_template('goods.html', games=games)
+
+
+@app.route('/add_game', methods=['GET', 'POST'])
+@flask_login.login_required
+def add_game():
+    form = gayform.GameForm()
+    if form.validate_on_submit():
+        game = Game(
+            name = form.name.data,
+            ratio = form.ratio.data,
+            price = form.price.data,
+            description = form.description.data,
+            developers = form.developers.data,
+            release_date = form.release_date.data,
+            genre = form.genre.data,
+            img = form.img.data,
+            img_wide = form.img_wide.data,
+
+            )
+        requests.post('http://127.0.0.1:5000/api/games', data=game.to_dict())
+    return flask.render_template('add_game.html', form=form)
+
+
+@app.route('/add_comment', methods=['GET', 'POST'])
+@flask_login.login_required
+def add_comment():
+    return flask.render_template('comments.html')
 
 
 @app.errorhandler(401)
