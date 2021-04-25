@@ -44,35 +44,43 @@ def main():
     app.run()
 
 
-@app.route("/")
+@app.route("/", methods=['GET', 'POST'])
 def index():
+    form = searcher()
+    if form.__class__.__name__ != 'SearchForm':
+        return form
     games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
     spin_games = list(filter(lambda x: x['img_wide'] is not None, games))
     random.shuffle(spin_games)
     home_games = list(filter(lambda x: x['img'] is not None, games))
     random.shuffle(home_games)
-    return flask.render_template("index.html", spin_games=spin_games[:3], home_games=home_games[:4])
+    return flask.render_template("index.html", spin_games=spin_games[:3], home_games=home_games[:4],
+                                 form=form)
 
 
 @app.route('/list', methods=['GET', 'POST'])
 def game_list():
-    form = searchform.SearchForm()
+    form = searcher()
+    if form.__class__.__name__ != 'SearchForm':
+        return form
     games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
     games_list = list(filter(lambda x: x['img'] is not None, games))
-    searcher(form)
     random.shuffle(games_list)
     return flask.render_template('list.html', games_list=games_list, form=form)
 
 
-@app.route('/cart')
+@app.route('/cart', methods=['GET', 'POST'])
 def cart():
+    form = searcher()
+    if form.__class__.__name__ != 'SearchForm':
+        return form
     ids = flask.session.get('cart', None)
     if ids is None:
         cart_list = []
     else:
         games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
         cart_list = list(filter(lambda x: x['id'] in ids, games))
-    return flask.render_template('cart.html', cart_list=cart_list)
+    return flask.render_template('cart.html', cart_list=cart_list, form=form)
 
 
 @app.route('/cart_delete/<int:id>', methods=['GET', 'POST'])
@@ -106,12 +114,15 @@ def cart_add(id):
     return flask.redirect('/cart')
 
 
-@app.route('/<int:game_id>')
+@app.route('/<int:game_id>', methods=['GET', 'POST'])
 def game(game_id):
+    form = searcher()
+    if form.__class__.__name__ != 'SearchForm':
+        return form
     sess = db_session.create_session()
     res = requests.get(f'http://127.0.0.1:5000/api/games/{game_id}').json()['game']
     res['genre'] = sess.query(Genres.genre).filter(res['genre'] == Genres.id).first()[0]
-    return flask.render_template('product.html', game=res)
+    return flask.render_template('product.html', game=res, form=form)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -178,12 +189,16 @@ def goods():
         return flask.render_template('goods.html', games=games)
 
 
-def searcher(form):
+def searcher():
+    form = searchform.SearchForm()
     games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
     games_list = list(filter(lambda x: x['img'] is not None, games))
     if request.method == 'POST':
-        matched_game = min(games_list, key=lambda x: Levenshtein.distance(form.search.data, x['name']))
-        flask.redirect(f'/{matched_game["id"]}')
+        matched_games = list(filter(lambda x: form.search.data.lower() in x['name'].lower(),
+                                    games_list))
+        matched_games.sort(key=lambda x: Levenshtein.distance(form.search.data, x['name']))
+        return flask.render_template('list.html', games_list=matched_games, form=form)
+    return form
 
 
 @login_manager.user_loader
