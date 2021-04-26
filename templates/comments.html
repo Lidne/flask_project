@@ -6,21 +6,18 @@
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
 <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='/css/comments.css')}}">
 <section>
-    <div class="container">
+    <div class="container-lg">
         <div class="row">
             <center>
-                <h1>Оставить комментарий</h1>
+                <h1 class="h1-comment">Оставить комментарий</h1>
                 <div class="col-lg-4 col-md-5 col-sm-4 offset-md-1 offset-sm-1 col-12 mt-4">
-                    <center>
                         <form id="algin-form" method="post">
-                            <div class="form-group">
-                                <h4>Оставить комментарий</h4> <label for="message">Текст</label> {{form.body(id="",
-                                cols="30",
+                            <div class="form-group aboba">
+                                <label for="message">Текст</label> {{form.body(id="", cols="30",
                                 rows="5", class="form-control", style="background-color: black;")}}
                             </div>
-                            {{ form.submit(type="submit", class="btn btn-primary")}}
+                            {{ form.submit(type="submit", class="btn btn-primary submit-btn-comment")}}
                         </form>
-                    </center>
                 </div>
             </center>
         </div>

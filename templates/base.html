@@ -35,14 +35,14 @@
                         <a class="nav-link" href="/cart">КОРЗИНА</a>
                     </li>
                 </ul>
+                {% if form_s %}
                 <div class="position-absolute start-50">
-                    {% if form_s %}
                     <form action="" class="d-flex" method="post">
                         {{form_s.search(class="form-control me-2", type="search", placeholder="Search game")}}
                         {{form_s.submit(class="btn btn-danger", type="submit")}}
                     </form>
-                    {% endif %}
                 </div>
+                {% endif %}
             </div>
         </div>
         <div class="reg_but">

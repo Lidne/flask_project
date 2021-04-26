@@ -86,6 +86,7 @@ body {
 .comment span,
 .darker h4,
 .darker span {
+    color: #fff;
     display: inline
 }
 
@@ -203,4 +204,16 @@ label {
 
 .username-com h4 {
     color: crimson;
+}
+
+.h1-comment {
+    color: #fff;
+}
+
+.submit-btn-comment {
+    margin: 30px;
+}
+
+.aboba {
+    align-content: center;
 }
