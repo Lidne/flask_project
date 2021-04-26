@@ -9,11 +9,12 @@ import flask_login
 import flask_restful
 from flask_ngrok import run_with_ngrok
 from flask_login import current_user
-from flask import request
+from flask import request, url_for
 from data import db_session
-from data.forms import loginform, registerform, searchform
+from data.forms import loginform, registerform, searchform, commentform
 from data.users import User
 from data.games import Game
+from data.comment import Comment
 from data.genres import Genres
 from data import users_resources
 from data import games_resources
@@ -55,7 +56,7 @@ def index():
     home_games = list(filter(lambda x: x['img'] is not None, games))
     random.shuffle(home_games)
     return flask.render_template("index.html", spin_games=spin_games[:3], home_games=home_games[:4],
-                                 form=form)
+                                 form_s=form)
 
 
 @app.route('/list', methods=['GET', 'POST'])
@@ -80,7 +81,7 @@ def cart():
     else:
         games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
         cart_list = list(filter(lambda x: x['id'] in ids, games))
-    return flask.render_template('cart.html', cart_list=cart_list, form=form)
+    return flask.render_template('cart.html', cart_list=cart_list, form_s=form)
 
 
 @app.route('/cart_delete/<int:id>', methods=['GET', 'POST'])
@@ -122,7 +123,27 @@ def game(game_id):
     sess = db_session.create_session()
     res = requests.get(f'http://127.0.0.1:5000/api/games/{game_id}').json()['game']
     res['genre'] = sess.query(Genres.genre).filter(res['genre'] == Genres.id).first()[0]
-    return flask.render_template('product.html', game=res, form=form)
+    comments = sess.query(Comment).filter(Comment.game_id == game_id).all()
+    for i in comments:
+        i.username = sess.query(User.nick).filter(User.id == i.user_id).first()[0]
+    return flask.render_template('product.html', game=res, form_s=form, comments=comments)
+
+
+@app.route('/add_comment/<int:game_id>', methods=['GET', 'POST'])
+@flask_login.login_required
+def add_comment(game_id):
+    form = commentform.CommentForm()
+    if request.method == 'POST':
+        sess = db_session.create_session()
+        comm = Comment(
+            body=form.body.data,
+            user_id=current_user.id,
+            game_id=game_id
+        )
+        sess.add(comm)
+        sess.commit()
+        return flask.redirect(f'/{game_id}')
+    return flask.render_template('comment.html', form=form)
 
 
 @app.route('/login', methods=['GET', 'POST'])

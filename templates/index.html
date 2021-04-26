@@ -65,7 +65,7 @@
 	 		<div class="games-wrapper">
 				{% for j in home_games %}
 	 			<div class="game-item">
-	 				<a class="game-item-img" href="/">
+	 				<a class="game-item-img" href="/{{j['id']}}">
 	 					<img class="" src="{{ j['img'] }}">
 	 				</a>
 	 					<a href="/{{j['id']}}" class="game-item-name">{{ j['name'] }}</a>

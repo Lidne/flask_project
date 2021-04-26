@@ -1,7 +1,9 @@
 import requests
 import json
 import random
-from data.users import User
+import datetime
+from data.comment import Comment
+from data import db_session
 
 
 def add1():
@@ -28,9 +30,13 @@ def add():
     print(res)
 
 
-# add1()
-# print(requests.get('http://127.0.0.1:5000/api/games/1').json())
-games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
-home_games = list(filter(lambda x: x['img'] is not None, games))
-random.shuffle(home_games)
-print(home_games)
+db_session.global_init('data/db/main.db')
+db = db_session.create_session()
+com = Comment(
+    body='hello, fuckers2!',
+    user_id=2,
+    game_id=1
+)
+db.add(com)
+db.commit()
+x = list(filter(lambda s: comm.user_id == s.id, users))[0]

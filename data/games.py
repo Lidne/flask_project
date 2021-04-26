@@ -23,3 +23,4 @@ class Game(SqlAlchemyBase, SerializerMixin):
     img_wide = sqlalchemy.Column(sqlalchemy.String, nullable=True)
 
     genres = orm.relation("Genres", back_populates='games')
+    comment = orm.relation("Comment")
