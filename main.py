@@ -2,28 +2,37 @@ import datetime
 import random
 import requests
 import string
+import Levenshtein
+import os
 
 import flask
 import flask_login
 import flask_restful
 from flask_ngrok import run_with_ngrok
 from flask_login import current_user
-from flask import request
+from flask import request, url_for
 from data import db_session
-from data.forms import loginform, registerform, gayform
+from data.forms import loginform, registerform, searchform, commentform, gayform
 from data.users import User
 from data.games import Game
+from data.comment import Comment
 from data.genres import Genres
 from data import users_resources
 from data import games_resources
-from werkzeug.security import generate_password_hash, check_password_hash
 
 app = flask.Flask(__name__)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
 api = flask_restful.Api(app)
 login_manager = flask_login.LoginManager(app)
 login_manager.init_app(app)
-run_with_ngrok(app)
+# run_with_ngrok(app)
+
+"""Если у вас не запускается проект, то необходимо скачать python-Levenshtein
+Вот ссылка: http://www.lfd.uci.edu/~gohlke/pythonlibs/#python-levenshtein.
+Выберите последнюю версию, подходящую под вашу систему (32 или 64 бит).
+После загрузки необходимо перейти в директорию, где лежит скачаный файл и запустить
+через консоль команду: pip install <название скачанного файла>.
+Без этого поиск по играм не заработает, а через репо устанавливать бесполезно"""
 
 
 def main():
@@ -37,31 +46,47 @@ def main():
     app.run()
 
 
-@app.route("/")
+@app.route("/", methods=['GET', 'POST'])
 def index():
+    form = searcher()
+    if form.__class__.__name__ != 'SearchForm':
+        return form
     games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
     spin_games = list(filter(lambda x: x['img_wide'] is not None, games))
     random.shuffle(spin_games)
     home_games = list(filter(lambda x: x['img'] is not None, games))
     random.shuffle(home_games)
-    return flask.render_template("index.html", spin_games=spin_games[:3], home_games=home_games[:5])
+    return flask.render_template("index.html", spin_games=spin_games[:3], home_games=home_games[:4],
+                                 form_s=form)
 
 
-@app.route('/cart')
+@app.route('/list', methods=['GET', 'POST'])
+def game_list():
+    form = searcher()
+    if form.__class__.__name__ != 'SearchForm':
+        return form
+    games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
+    games_list = list(filter(lambda x: x['img'] is not None, games))
+    random.shuffle(games_list)
+    return flask.render_template('list.html', games_list=games_list, form_s=form)
+
+
+
+@app.route('/cart', methods=['GET', 'POST'])
 def cart():
+    form = searcher()
+    if form.__class__.__name__ != 'SearchForm':
+        return form
     ids = flask.session.get('cart', None)
     if ids is None:
         cart_list = []
     else:
         games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
         cart_list = list(filter(lambda x: x['id'] in ids, games))
-    return flask.render_template('cart.html', cart_list=cart_list)
+    return flask.render_template('cart.html', cart_list=cart_list, form_s=form)
 
 
-# это функция для удаления новости из корзины
-# просто перенаправь на эту страницу по кнопке удалить из корзины
 @app.route('/cart_delete/<int:id>', methods=['GET', 'POST'])
-@flask_login.login_required
 def cart_delete(id):
     cart1 = flask.session.get('cart', None)
     if cart1 is not None:
@@ -81,10 +106,7 @@ def redirect_url(default='index'):
            flask.url_for(default)
 
 
-# это функция для добавление новости в корзину
-# просто перенаправь на эту страницу по кнопке добавить в корзину
 @app.route('/cart_add/<int:id>', methods=['GET', 'POST'])
-@flask_login.login_required
 def cart_add(id):
     cart1 = flask.session.get('cart', None)
     if cart1 is None:
@@ -95,12 +117,35 @@ def cart_add(id):
     return flask.redirect('/cart')
 
 
-@app.route('/<int:game_id>')
+@app.route('/<int:game_id>', methods=['GET', 'POST'])
 def game(game_id):
+    form = searcher()
+    if form.__class__.__name__ != 'SearchForm':
+        return form
     sess = db_session.create_session()
     res = requests.get(f'http://127.0.0.1:5000/api/games/{game_id}').json()['game']
     res['genre'] = sess.query(Genres.genre).filter(res['genre'] == Genres.id).first()[0]
-    return flask.render_template('product.html', game=res)
+    comments = sess.query(Comment).filter(Comment.game_id == game_id).all()
+    for i in comments:
+        i.username = sess.query(User.nick).filter(User.id == i.user_id).first()[0]
+    return flask.render_template('product.html', game=res, form_s=form, comments=comments)
+
+
+@app.route('/add_comment/<int:game_id>', methods=['GET', 'POST'])
+@flask_login.login_required
+def add_comment(game_id):
+    form = commentform.CommentForm()
+    if request.method == 'POST':
+        sess = db_session.create_session()
+        comm = Comment(
+            body=form.body.data,
+            user_id=current_user.id,
+            game_id=game_id
+        )
+        sess.add(comm)
+        sess.commit()
+        return flask.redirect(f'/{game_id}')
+    return flask.render_template('comments.html', form=form)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -141,33 +186,32 @@ def register():
     return flask.render_template('register.html', title='Регистрация', form=form)
 
 
-@app.route('/list')
+@app.route('/add_game', methods=['GET', 'POST'])
 @flask_login.login_required
-def game_list():
-    games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
-    games_list = list(filter(lambda x: x['img'] is not None, games))
-    random.shuffle(games_list)
-    return flask.render_template('list.html', games_list=games_list)
-
-
-@login_manager.user_loader
-def load_user(user_id):
-    db_sess = db_session.create_session()
-    return db_sess.query(User).get(user_id)
-
-
-@app.route('/logout')
-@flask_login.login_required
-def logout():
-    flask_login.logout_user()
-    return flask.redirect("/login")
+def add_game():
+    if not current_user.admin:
+        return flask.redirect('/')
+    form = gayform.GameForm()
+    if request.method == 'POST':
+        genre = int(''.join(list(filter(lambda x: x.isdigit(), list(form.genre.data)))))
+        game = Game(
+            name=form.name.data,
+            ratio=form.ratio.data,
+            price=int(form.price.data),
+            description=form.description.data,
+            developers=form.developers.data,
+            release_date=form.release_date.data,
+            genre=genre
+            )
+        requests.post('http://127.0.0.1:5000/api/games', data=game.to_dict())
+    return flask.render_template('add_game.html', form=form)
 
 
 @app.route('/buy')
 @flask_login.login_required
 def buy():
     ids = flask.session.get('cart', None)
-    if ids is not None:
+    if ids is not None and ids:
         games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
         cart_list = list(filter(lambda x: x['id'] in ids, games))
         total = sum(list(map(lambda x: x['price'], cart_list)))
@@ -185,35 +229,33 @@ def goods():
         for i in range(len(games)):
             random.shuffle(text)
             games[i]['code'] = ''.join(text[:7])
-    cart_delete(0)
-    return flask.render_template('goods.html', games=games)
+        cart_delete(0)
+        return flask.render_template('goods.html', games=games)
 
 
-@app.route('/add_game', methods=['GET', 'POST'])
+def searcher():
+    form = searchform.SearchForm()
+    games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
+    games_list = list(filter(lambda x: x['img'] is not None, games))
+    if request.method == 'POST':
+        matched_games = list(filter(lambda x: form.search.data.lower() in x['name'].lower(),
+                                    games_list))
+        matched_games.sort(key=lambda x: Levenshtein.distance(form.search.data, x['name']))
+        return flask.render_template('list.html', games_list=matched_games, form=form)
+    return form
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    db_sess = db_session.create_session()
+    return db_sess.query(User).get(user_id)
+
+
+@app.route('/logout')
 @flask_login.login_required
-def add_game():
-    form = gayform.GameForm()
-    if form.validate_on_submit():
-        game = Game(
-            name = form.name.data,
-            ratio = form.ratio.data,
-            price = form.price.data,
-            description = form.description.data,
-            developers = form.developers.data,
-            release_date = form.release_date.data,
-            genre = form.genre.data,
-            img = form.img.data,
-            img_wide = form.img_wide.data,
-
-            )
-        requests.post('http://127.0.0.1:5000/api/games', data=game.to_dict())
-    return flask.render_template('add_game.html', form=form)
-
-
-@app.route('/add_comment', methods=['GET', 'POST'])
-@flask_login.login_required
-def add_comment():
-    return flask.render_template('comments.html')
+def logout():
+    flask_login.logout_user()
+    return flask.redirect("/login")
 
 
 @app.errorhandler(401)

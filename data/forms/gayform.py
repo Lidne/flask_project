@@ -1,6 +1,12 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField, IntegerField, TextAreaField, FileField, DateField
+from data.genres import Genres
+from data import db_session
+from wtforms import StringField, PasswordField, SelectField, SubmitField, IntegerField, TextAreaField, FileField
 from wtforms.validators import DataRequired, Email, InputRequired
+
+db_session.global_init('data/db/main.db')
+sess = db_session.create_session()
+genres = sess.query(Genres.id, Genres.genre).all()
 
 
 class GameForm(FlaskForm):
@@ -9,9 +15,9 @@ class GameForm(FlaskForm):
     description = TextAreaField('Описание')
     developers = StringField('Разработчики', validators=[InputRequired()])
     release_date = StringField('Дата', validators=[InputRequired()])
-    genre = StringField('Жанр', validators=[InputRequired()])
+    genre = SelectField('Жанр', validators=[InputRequired()], choices=genres)
     img = FileField('Изображение')
     img_wide = FileField('Широкое изображение')
     ratio = IntegerField('Оценка', validators=[InputRequired()])
-    submit = SubmitField('Post')
+    submit = SubmitField('Добавить')
 
