@@ -99,7 +99,7 @@ body {
 	background-color: #0d0d0d;
 }
 
-img {
+.postimg, .wideimg {
 	width: 100%;
 	height: 100%;
 }

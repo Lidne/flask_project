@@ -184,6 +184,27 @@ def register():
     return flask.render_template('register.html', title='Регистрация', form=form)
 
 
+@app.route('/add_game', methods=['GET', 'POST'])
+@flask_login.login_required
+def add_game():
+    form = gayform.GameForm()
+    if form.validate_on_submit():
+        game = Game(
+            name=form.name.data,
+            ratio=form.ratio.data,
+            price=form.price.data,
+            description=form.description.data,
+            developers=form.developers.data,
+            release_date=form.release_date.data,
+            genre=form.genre.data,
+            img=form.img.data,
+            img_wide=form.img_wide.data,
+
+            )
+        requests.post('http://127.0.0.1:5000/api/games', data=game.to_dict())
+    return flask.render_template('add_game.html', form=form)
+
+
 @app.route('/buy')
 @flask_login.login_required
 def buy():
@@ -233,6 +254,12 @@ def load_user(user_id):
 def logout():
     flask_login.logout_user()
     return flask.redirect("/login")
+
+
+@app.route('/add_comment', methods=['GET', 'POST'])
+@flask_login.login_required
+def add_comment():
+    return flask.render_template('comments.html')
 
 
 @app.errorhandler(401)
