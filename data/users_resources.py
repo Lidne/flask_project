@@ -14,8 +14,10 @@ def abort_if_user_not_found(user_id):
 
 class UsersResource(flask_restful.Resource):
     """Класс ресурса пользователя"""
+
     def get(self, user_id):
         """Функция возвращает ответ на get запрос"""
+
         abort_if_user_not_found(user_id)
         session = db_session.create_session()
         user = session.query(User).get(user_id)
@@ -24,6 +26,7 @@ class UsersResource(flask_restful.Resource):
 
     def delete(self, user_id):
         """Функция удаляет запись в бд по delete запросу"""
+
         abort_if_user_not_found(user_id)
         session = db_session.create_session()
         user = session.query(User).get(user_id)
@@ -36,6 +39,7 @@ class UsersListResource(flask_restful.Resource):
     """Класс полного списка пользователей"""
     def get(self):
         """Функция возвращает ответ на get запрос"""
+
         session = db_session.create_session()
         users = session.query(User).all()
         return flask.jsonify({'users': [item.to_dict(
@@ -43,6 +47,7 @@ class UsersListResource(flask_restful.Resource):
 
     def post(self):
         """Функция добавляет нового пользователя по post запросу"""
+
         args = parser.parse_args()
         session = db_session.create_session()
         user = User(

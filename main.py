@@ -36,22 +36,26 @@ login_manager.init_app(app)
 
 
 def main():
+    """Функция, инициаилизирующая api и базу данных"""
     # connecting to a database
     db_session.global_init("data/db/main.db")
     # доавляем api в приложение для использования в дальнейшем
+    # api для пользователей
     api.add_resource(users_resources.UsersListResource, '/api/users')
     api.add_resource(users_resources.UsersResource, '/api/users/<int:user_id>')
+    # api для игр
     api.add_resource(games_resources.GamesListResource, '/api/games')
     api.add_resource(games_resources.GamesResource, '/api/games/<int:game_id>')
-    app.run()
+    app.run()  # запускаем приложение
 
 
 @app.route("/", methods=['GET', 'POST'])
 def index():
-    form = searcher()
+    """Функция зугружает главную страницу"""
+    form = searcher()  # форма для поиска
     if form.__class__.__name__ != 'SearchForm':
         return form
-    games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
+    games = requests.get('http://127.0.0.1:5000/api/games').json()['games']  # пол
     spin_games = list(filter(lambda x: x['img_wide'] is not None, games))
     random.shuffle(spin_games)
     home_games = list(filter(lambda x: x['img'] is not None, games))
@@ -62,31 +66,34 @@ def index():
 
 @app.route('/list', methods=['GET', 'POST'])
 def game_list():
+    """Функция загружает полный список игр"""
     form = searcher()
     if form.__class__.__name__ != 'SearchForm':
         return form
     games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
     games_list = list(filter(lambda x: x['img'] is not None, games))
     random.shuffle(games_list)
-    return flask.render_template('list.html', games_list=games_list, form=form)
+    return flask.render_template('list.html', games_list=games_list, form_s=form)
 
 
 @app.route('/cart', methods=['GET', 'POST'])
 def cart():
+    """Функция загружает корзину"""
     form = searcher()
     if form.__class__.__name__ != 'SearchForm':
         return form
-    ids = flask.session.get('cart', None)
-    if ids is None:
+    ids = flask.session.get('cart', None)  # получаем значения из сессии
+    if ids is None:  # если в сессии пусто, то игры не выводим
         cart_list = []
     else:
-        games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
+        games = requests.get('http://127.0.0.1:5000/api/games').json()['games']  # получем список игр
         cart_list = list(filter(lambda x: x['id'] in ids, games))
     return flask.render_template('cart.html', cart_list=cart_list, form_s=form)
 
 
 @app.route('/cart_delete/<int:id>', methods=['GET', 'POST'])
 def cart_delete(id):
+    """Функция удаляет из корзины игру по id"""
     cart1 = flask.session.get('cart', None)
     if cart1 is not None:
         if id == 0:
@@ -100,6 +107,7 @@ def cart_delete(id):
 
 
 def redirect_url(default='index'):
+    """Функция возвращает адрес, с которого мы пришли"""
     return request.args.get('next') or \
            request.referrer or \
            flask.url_for(default)
@@ -107,6 +115,7 @@ def redirect_url(default='index'):
 
 @app.route('/cart_add/<int:id>', methods=['GET', 'POST'])
 def cart_add(id):
+    """Функция добавляет игру в корзину"""
     cart1 = flask.session.get('cart', None)
     if cart1 is None:
         cart1 = [id]
@@ -118,6 +127,7 @@ def cart_add(id):
 
 @app.route('/<int:game_id>', methods=['GET', 'POST'])
 def game(game_id):
+    """Функция загружает страницу игры"""
     form = searcher()
     if form.__class__.__name__ != 'SearchForm':
         return form
@@ -133,6 +143,7 @@ def game(game_id):
 @app.route('/add_comment/<int:game_id>', methods=['GET', 'POST'])
 @flask_login.login_required
 def add_comment(game_id):
+    """Функция добавляет комментарий через форму"""
     form = commentform.CommentForm()
     if request.method == 'POST':
         sess = db_session.create_session()
@@ -149,6 +160,7 @@ def add_comment(game_id):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    """Функция логирует пользователя"""
     form = loginform.LoginForm()
     db_sess = db_session.create_session()
     user = db_sess.query(User).filter(User.email == form.email.data).first()
@@ -164,6 +176,7 @@ def login():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    """Функция регистрирует пользователя"""
     form = registerform.RegisterForm()
     if form.validate_on_submit():
         if form.password.data != form.password_again.data:
@@ -188,6 +201,7 @@ def register():
 @app.route('/add_game', methods=['GET', 'POST'])
 @flask_login.login_required
 def add_game():
+    """Функция загружает шаблон для добавления игры"""
     if not current_user.admin:
         return flask.redirect('/')
     form = gayform.GameForm()
@@ -209,6 +223,7 @@ def add_game():
 @app.route('/buy')
 @flask_login.login_required
 def buy():
+    """Функция загружает форму для покупки игр из корзины"""
     ids = flask.session.get('cart', None)
     if ids is not None and ids:
         games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
@@ -220,10 +235,12 @@ def buy():
 @app.route('/goods')
 @flask_login.login_required
 def goods():
+    """Загружаем купленные игры с случайными кодами"""
     ids = flask.session.get('cart', None)
     if ids is not None:
         games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
         games = list(filter(lambda x: x['id'] in ids, games))
+        # перемешиваем список с буквами и числами и берём срез
         text = list(string.ascii_uppercase + string.digits)
         for i in range(len(games)):
             random.shuffle(text)
@@ -233,6 +250,7 @@ def goods():
 
 
 def searcher():
+    """Функция возращает список игр с похожим названием на название из формы"""
     form = searchform.SearchForm()
     games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
     games_list = list(filter(lambda x: x['img'] is not None, games))
@@ -257,6 +275,7 @@ def logout():
     return flask.redirect("/login")
 
 
+# хендлеры ошибок с кастомными страницами ошибок
 @app.errorhandler(401)
 def not_found(error):
     return flask.render_template('unauthorised.html', code='401',

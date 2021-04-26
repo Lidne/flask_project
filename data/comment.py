@@ -4,6 +4,7 @@ from sqlalchemy import orm
 from sqlalchemy_serializer import SerializerMixin
 
 from .db_session import SqlAlchemyBase
+"""Класс-модель комментария для базы данных"""
 
 
 class Comment(SqlAlchemyBase, SerializerMixin):
