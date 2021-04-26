@@ -18,7 +18,7 @@
                 <div class="carousel-caption d-none d-md-block">
                     <h5 class="display-2 sekiro">{{ spin_games[0]['name'] }}</h5>
                     <p>{{ spin_games[0]['description'] }}</p>
-                    <button type="button" class="btn btn-danger btn-lg">Купить</button>
+                    <a href="/cart_add/{{spin_games[0]['id']}}" class="btn btn-danger btn-lg">В корзину</a>
                 </div>
             </div>
             <div class="carousel-item" data-bs-interval="4000">
@@ -26,7 +26,7 @@
                 <div class="carousel-caption d-none d-md-block">
                     <h5 class="display-2 btl-2">{{ spin_games[1]['name'] }}</h5>
                     <p>{{ spin_games[1]['description'] }}</p>
-                    <button type="button" class="btn btn-danger btn-lg">Купить</button>
+                    <a href="/cart_add/{{spin_games[1]['id']}}" class="btn btn-danger btn-lg">В корзину</a>
                 </div>
             </div>
             <div class="carousel-item" data-bs-interval="4000">
@@ -35,7 +35,7 @@
                 <div class="carousel-caption d-none d-md-block">
                     <h5 class="display-2 witcher">{{ spin_games[2]['name'] }}</h5>
                     <p>{{ spin_games[2]['description'] }}</p>
-                    <button type="button" class="btn btn-danger btn-lg">Купить</button>
+                    <a href="/cart_add/{{spin_games[2]['id']}}" class="btn btn-danger btn-lg">В корзину</a>
                 </div>
             </div>
         </div>

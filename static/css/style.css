@@ -187,3 +187,16 @@ footer {
 .btn-primary.is-disabled {
   opacity: .5;
 }
+
+
+.btn-danger {
+	background: crimson;
+    border-radius: 11px;
+    color: #000;
+    font-size: 18px;
+    letter-spacing: .04em;
+}
+
+.btn-a-spin a {
+	font-family: 'tt milks';
+}

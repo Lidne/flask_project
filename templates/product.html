@@ -5,6 +5,7 @@
 <link rel="stylesheet" type="text/css" href="static/css/product.css">
 <script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<link rel="stylesheet" type="text/css" href="static/css/comments.css">
 
 
 <!------ Include the above in your HEAD tag ---------->
@@ -27,7 +28,7 @@
   </span>
                 </p> <!-- price-detail-wrap .// -->
                 <dl class="item-property">
-                    <dt>Description</dt>
+                    <dt>Описание</dt>
                     <dd><p>{{ game['description'] }}</p></dd>
                 </dl>
                 <dl class="param param-feature">
@@ -52,20 +53,25 @@
         <a class="btn btn-primary" href="/add_comment/{{game['id']}}">Оставить комментарий</a>
     </center>
     <br>
-    <div class="container-fluid">
+    <div class="container comments-body">
+            <div class="row">
+           <div class="col-sm-5 col-md-6 col-12 pb-4">
         {% for comm in comments %}
-        <div class="col-md6 border rounded" style="background-color: #fff; color: #000;">
-            <h2>{{comm.body}}</h2>
-            <div>
-                {{comm.username}}
-            </div>
-            <div>
-                {{comm.timestamp.strftime('%d %b %Y; %H:%M:%S')}}
-            </div>
+        <div class="comment mt-4 text-justify float-left">
+            <p>{{comm.body }}</p>
+            <h4 class="username-com">
+                {{ comm.username }}
+            </h4>
+            <span>
+                {{ comm.timestamp.strftime('%d %b %Y; %H:%M:%S') }}
+            </span>
         </div>
         <br>
         {% endfor %}
     </div>
+    </div>
+    </div>
+
 </div> <!-- card.// -->
 <!--container.//-->
 {% endblock %}
