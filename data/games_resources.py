@@ -54,7 +54,6 @@ class GamesListResource(flask_restful.Resource):
         """Функция добавляет нового пользователя по post запросу"""
 
         args = parser_games.parse_args()
-        print(args)
         session = db_session.create_session()
         game = Game(
             price=args['price'],
