@@ -54,16 +54,16 @@
     <br>
     <div class="container-fluid">
         {% for comm in comments %}
-            <div class="col-md6 border rounded" style="background-color: #fff; color: #000;">
-                <h2>{{comm.body}}</h2>
-                <div>
-                    {{comm.username}}
-                </div>
-                <div>
-                    {{comm.timestamp.strftime('%d %b %Y; %H:%M:%S')}}
-                </div>
+        <div class="col-md6 border rounded" style="background-color: #fff; color: #000;">
+            <h2>{{comm.body}}</h2>
+            <div>
+                {{comm.username}}
             </div>
-            <br>
+            <div>
+                {{comm.timestamp.strftime('%d %b %Y; %H:%M:%S')}}
+            </div>
+        </div>
+        <br>
         {% endfor %}
     </div>
 </div> <!-- card.// -->

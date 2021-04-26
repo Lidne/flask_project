@@ -36,12 +36,12 @@
                     </li>
                 </ul>
                 <div class="position-absolute start-50">
+                    {% if form_s %}
                     <form action="" class="d-flex" method="post">
-                        {% if form_s %}
-                            {{form_s.search(class="form-control me-2", type="search", placeholder="Search game")}}
-                            {{form_s.submit(class="btn btn-danger", type="submit")}}
-                        {% endif %}
+                        {{form_s.search(class="form-control me-2", type="search", placeholder="Search game")}}
+                        {{form_s.submit(class="btn btn-danger", type="submit")}}
                     </form>
+                    {% endif %}
                 </div>
             </div>
         </div>

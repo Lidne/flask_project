@@ -3,6 +3,7 @@ import random
 import requests
 import string
 import Levenshtein
+import os
 
 import flask
 import flask_login
@@ -11,7 +12,7 @@ from flask_ngrok import run_with_ngrok
 from flask_login import current_user
 from flask import request, url_for
 from data import db_session
-from data.forms import loginform, registerform, searchform, commentform
+from data.forms import loginform, registerform, searchform, commentform, gayform
 from data.users import User
 from data.games import Game
 from data.comment import Comment
@@ -143,7 +144,7 @@ def add_comment(game_id):
         sess.add(comm)
         sess.commit()
         return flask.redirect(f'/{game_id}')
-    return flask.render_template('comment.html', form=form)
+    return flask.render_template('comments.html', form=form)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -187,19 +188,19 @@ def register():
 @app.route('/add_game', methods=['GET', 'POST'])
 @flask_login.login_required
 def add_game():
+    if not current_user.admin:
+        return flask.redirect('/')
     form = gayform.GameForm()
-    if form.validate_on_submit():
+    if request.method == 'POST':
+        genre = int(''.join(list(filter(lambda x: x.isdigit(), list(form.genre.data)))))
         game = Game(
             name=form.name.data,
             ratio=form.ratio.data,
-            price=form.price.data,
+            price=int(form.price.data),
             description=form.description.data,
             developers=form.developers.data,
             release_date=form.release_date.data,
-            genre=form.genre.data,
-            img=form.img.data,
-            img_wide=form.img_wide.data,
-
+            genre=genre
             )
         requests.post('http://127.0.0.1:5000/api/games', data=game.to_dict())
     return flask.render_template('add_game.html', form=form)
@@ -254,12 +255,6 @@ def load_user(user_id):
 def logout():
     flask_login.logout_user()
     return flask.redirect("/login")
-
-
-@app.route('/add_comment', methods=['GET', 'POST'])
-@flask_login.login_required
-def add_comment():
-    return flask.render_template('comments.html')
 
 
 @app.errorhandler(401)
