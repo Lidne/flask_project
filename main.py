@@ -10,6 +10,7 @@ import flask_login
 import flask_restful
 from flask_ngrok import run_with_ngrok
 from flask_login import current_user
+from werkzeug.utils import secure_filename
 from flask import request, url_for
 from data import db_session
 from data.forms import loginform, registerform, searchform, commentform, gayform
@@ -55,10 +56,10 @@ def index():
     form = searcher()  # форма для поиска
     if form.__class__.__name__ != 'SearchForm':
         return form
-    games = requests.get('http://127.0.0.1:5000/api/games').json()['games']  # пол
-    spin_games = list(filter(lambda x: x['img_wide'] is not None, games))
+    games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
+    spin_games = list(filter(lambda x: x['img_wide'] is not None and x['is_selling'], games))
     random.shuffle(spin_games)
-    home_games = list(filter(lambda x: x['img'] is not None, games))
+    home_games = list(filter(lambda x: x['img'] is not None and x['is_selling'], games))
     random.shuffle(home_games)
     return flask.render_template("index.html", spin_games=spin_games[:3], home_games=home_games[:4],
                                  form_s=form)
@@ -71,7 +72,7 @@ def game_list():
     if form.__class__.__name__ != 'SearchForm':
         return form
     games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
-    games_list = list(filter(lambda x: x['img'] is not None, games))
+    games_list = list(filter(lambda x: x['img'] is not None and x['is_selling'], games))
     random.shuffle(games_list)
     return flask.render_template('list.html', games_list=games_list, form_s=form)
 
@@ -87,7 +88,7 @@ def cart():
         cart_list = []
     else:
         games = requests.get('http://127.0.0.1:5000/api/games').json()['games']  # получем список игр
-        cart_list = list(filter(lambda x: x['id'] in ids, games))
+        cart_list = list(filter(lambda x: x['id'] in ids and x['is_selling'], games))
     return flask.render_template('cart.html', cart_list=cart_list, form_s=form)
 
 
@@ -108,9 +109,9 @@ def cart_delete(id):
 
 def redirect_url(default='index'):
     """Функция возвращает адрес, с которого мы пришли"""
-    return request.args.get('next') or \
-           request.referrer or \
-           flask.url_for(default)
+    return (request.args.get('next') or
+            request.referrer or
+            flask.url_for(default))
 
 
 @app.route('/cart_add/<int:id>', methods=['GET', 'POST'])
@@ -133,6 +134,8 @@ def game(game_id):
         return form
     sess = db_session.create_session()
     res = requests.get(f'http://127.0.0.1:5000/api/games/{game_id}').json()['game']
+    if not res['is_selling'] and not current_user.admin:
+        return flask.abort(404)
     res['genre'] = sess.query(Genres.genre).filter(res['genre'] == Genres.id).first()[0]
     comments = sess.query(Comment).filter(Comment.game_id == game_id).all()
     for i in comments:
@@ -206,7 +209,29 @@ def add_game():
         return flask.redirect('/')
     form = gayform.GameForm()
     if request.method == 'POST':
+        games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
+        if form.name.data in list(map(lambda x: x['name'], games)):
+            return flask.render_template('add_game.html', error='Такое название уже есть', form=form)
         genre = int(''.join(list(filter(lambda x: x.isdigit(), list(form.genre.data)))))
+
+        if form.img.data is not None:
+            filename = secure_filename(form.img.data.filename)
+            file_path = 'static/img/covers/' + filename
+            if os.access(file_path, os.F_OK):
+                return flask.render_template('add_game.html', error='Обложка уже есть', form=form)
+            form.img.data.save(file_path)
+        else:
+            file_path = None
+
+        if form.img_wide.data is not None:
+            filename_wide = secure_filename(form.img_wide.data.filename)
+            file_path_wide = 'static/img/wide/' + filename_wide
+            if os.access(file_path_wide, os.F_OK):
+                return flask.render_template('add_game.html', error='Широкая картинка уже есть', form=form)
+            form.img_wide.data.save(file_path_wide)
+        else:
+            file_path_wide = None
+
         game = Game(
             name=form.name.data,
             ratio=form.ratio.data,
@@ -214,10 +239,38 @@ def add_game():
             description=form.description.data,
             developers=form.developers.data,
             release_date=form.release_date.data,
-            genre=genre
-            )
-        requests.post('http://127.0.0.1:5000/api/games', data=game.to_dict())
+            genre=genre,
+            img=file_path,
+            img_wide=file_path_wide
+        )
+        res = requests.post('http://127.0.0.1:5000/api/games', data=game.to_dict()).json()
+        if 'success' in res:
+            sess = db_session.create_session()
+            game_id = sess.query(Game.id).filter(Game.name == game.name).first()[0]
+            return flask.redirect(f'/{game_id}')
+
     return flask.render_template('add_game.html', form=form)
+
+
+@app.route('/delete_game/<int:game_id>')
+@flask_login.login_required
+def delete_game(game_id):
+    res = requests.delete(f'http://127.0.0.1:5000/api/games/{game_id}').json()
+    print(res)
+    return flask.redirect('/list')
+
+
+@app.route('/add_game/<int:game_id>')
+@flask_login.login_required
+def selling_game(game_id):
+    sess = db_session.create_session()
+    res = sess.query(Game).get(game_id)
+    if not res and not current_user.admin and not res:
+        flask.abort(404)
+    else:
+        res.is_selling = True
+    sess.commit()
+    return flask.redirect(f'/{game_id}')
 
 
 @app.route('/buy')

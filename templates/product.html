@@ -45,6 +45,11 @@
                 </dl>
                 <!-- item-property-hor .// -->
                 <a href="/cart_add/{{game['id']}}" class="btn btn-primary text-uppercase">Добавить в корзину</a>
+                {% if current_user.admin and game['is_selling'] %}
+                    <a href="/delete_game/{{game['id']}}" class="btn btn-danger">Удалить игру</a>
+                {% elif current_user.admin and not game['is_selling'] %}
+                    <a href="/add_game/{{game['id']}}" class="btn btn-primary">Добавить игру</a>
+                {% endif %}
             </article> <!-- card-body.// -->
         </aside> <!-- col.// -->
     </div> <!-- row.// -->
