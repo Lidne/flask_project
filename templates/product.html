@@ -58,18 +58,19 @@
         <a class="btn btn-primary" href="/add_comment/{{game['id']}}">Оставить комментарий</a>
     </center>
     <br>
-    <div class="container comments-body">
-            <div class="row">
+    <div class="container-lg comments-body">
+        <div class="row">
            <div class="col-sm-5 col-md-6 col-12 pb-4">
         {% for comm in comments %}
         <div class="comment mt-4 text-justify float-left">
-            <p>{{comm.body }}</p>
+            <img src="{{ comm.avatarcom }}" class="rounded-circle">
             <h4 class="username-com">
                 {{ comm.username }}
             </h4>
             <span>
                 {{ comm.timestamp.strftime('%d %b %Y; %H:%M:%S') }}
             </span>
+            <p>{{comm.body }}</p>
         </div>
         <br>
         {% endfor %}

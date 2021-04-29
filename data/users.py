@@ -5,6 +5,7 @@ from sqlalchemy import orm
 from .db_session import SqlAlchemyBase
 from flask_login import UserMixin
 from sqlalchemy_serializer import SerializerMixin
+from hashlib import md5
 """Класс-модель пользователя для базы данных"""
 
 
@@ -28,3 +29,13 @@ class User(SqlAlchemyBase, UserMixin, SerializerMixin):
 
     def check_password(self, password):
         return check_password_hash(self.hashed_password, password)
+
+    def avatar(self, size):
+        digest = md5(self.email.lower().encode('utf-8')).hexdigest()
+        return 'https://www.gravatar.com/avatar/{}?d=identicon&s={}'.format(
+            digest, size)
+
+    def comavatar(self, size):
+        digest = md5(self.lower().encode('utf-8')).hexdigest()
+        return 'https://www.gravatar.com/avatar/{}?d=identicon&s={}'.format(
+            digest, size)

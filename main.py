@@ -140,6 +140,8 @@ def game(game_id):
     comments = sess.query(Comment).filter(Comment.game_id == game_id).all()
     for i in comments:
         i.username = sess.query(User.nick).filter(User.id == i.user_id).first()[0]
+        i.emailcom = sess.query(User.email).filter(User.id == i.user_id).first()[0]
+        i.avatarcom = User.comavatar(i.emailcom, 40)
     return flask.render_template('product.html', game=res, form_s=form, comments=comments)
 
 

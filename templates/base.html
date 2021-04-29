@@ -51,6 +51,7 @@
             {% endif %}
             {% if current_user.is_authenticated %}
             <a class="btn btn-primary" href="/logout">{{ current_user.nick }}</a>
+            <img src="{{ current_user.avatar(50) }}" class="rounded-circle">
             {% else %}
             <a class="btn btn-primary" href="/register">Зарегистрироваться</a>
             <a class="btn btn-primary" href="/login">Войти</a>
