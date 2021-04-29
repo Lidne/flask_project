@@ -13,7 +13,7 @@ from flask_login import current_user
 from werkzeug.utils import secure_filename
 from flask import request, url_for
 from data import db_session
-from data.forms import loginform, registerform, searchform, commentform, gayform
+from data.forms import loginform, registerform, searchform, commentform, gameform
 from data.users import User
 from data.games import Game
 from data.comment import Comment
@@ -209,7 +209,7 @@ def add_game():
     """Функция загружает шаблон для добавления игры"""
     if not current_user.admin:
         return flask.redirect('/')
-    form = gayform.GameForm()
+    form = gameform.GameForm()
     if request.method == 'POST':
         games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
         if form.name.data in list(map(lambda x: x['name'], games)):
