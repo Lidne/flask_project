@@ -35,14 +35,14 @@
                         <a class="nav-link" href="/cart">КОРЗИНА</a>
                     </li>
                 </ul>
+                {% if form_s %}
                 <div class="position-absolute start-50">
-                    {% if form_s %}
                     <form action="" class="d-flex" method="post">
                         {{form_s.search(class="form-control me-2", type="search", placeholder="Search game")}}
                         {{form_s.submit(class="btn btn-danger", type="submit")}}
                     </form>
-                    {% endif %}
                 </div>
+                {% endif %}
             </div>
         </div>
         <div class="reg_but">
@@ -51,6 +51,7 @@
             {% endif %}
             {% if current_user.is_authenticated %}
             <a class="btn btn-primary" href="/logout">{{ current_user.nick }}</a>
+            <img src="{{ current_user.avatar(50) }}" class="rounded-circle">
             {% else %}
             <a class="btn btn-primary" href="/register">Зарегистрироваться</a>
             <a class="btn btn-primary" href="/login">Войти</a>

@@ -31,7 +31,7 @@ class GamesResource(flask_restful.Resource):
         abort_if_user_not_found(game_id)
         session = db_session.create_session()
         game = session.query(Game).get(game_id)
-        session.delete(game)
+        game.is_selling = False
         session.commit()
         return flask.jsonify({'success': 'OK'})
 

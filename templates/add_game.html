@@ -11,8 +11,11 @@
         </div>
         <div class="panel-body">
 
-            <form action="/add_game" class="form-horizontal main" method="post">
+            <form action="/add_game" class="form-horizontal main" method="post"  enctype="multipart/form-data">
                 {{ form.hidden_tag() }}
+                {% if error %}
+                    <div class="alert alert-danger">{{error}}</div>
+                {% endif %}
                 <div class="form-group">
                     {{ form.name.label }}
                     <div class="col-sm-9">
