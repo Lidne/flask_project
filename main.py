@@ -1,103 +1,188 @@
 import datetime
 import random
+import requests
+import string
+import Levenshtein
+import os
 
 import flask
 import flask_login
-from flask_login import LoginManager
-from data import db_session, news_api
-from data.forms.user import RegisterForm, LoginForm
-from data.forms.jobs import JobsForm
+import flask_restful
+from flask_ngrok import run_with_ngrok
+from flask_login import current_user
+from werkzeug.utils import secure_filename
+from flask import request, url_for
+from data import db_session
+from data.forms import loginform, registerform, searchform, commentform, gameform
 from data.users import User
-from data.games import Games
+from data.games import Game
+from data.comment import Comment
+from data.genres import Genres
+from data import users_resources
+from data import games_resources
 
 app = flask.Flask(__name__)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
-login_manager = LoginManager()
+api = flask_restful.Api(app)
+login_manager = flask_login.LoginManager(app)
 login_manager.init_app(app)
+# run_with_ngrok(app)
+
+"""Если у вас не запускается проект, то необходимо скачать python-Levenshtein
+Вот ссылка: http://www.lfd.uci.edu/~gohlke/pythonlibs/#python-levenshtein.
+Выберите последнюю версию, подходящую под вашу систему (32 или 64 бит).
+После загрузки необходимо перейти в директорию, где лежит скачаный файл и запустить
+через консоль команду: pip install <название скачанного файла>.
+Без этого поиск по играм не заработает, а через репо устанавливать бесполезно"""
 
 
 def main():
-    db_session.global_init("data/db/mars_one.db")
-    app.register_blueprint(news_api.blueprint)
-    app.run()
+    """Функция, инициаилизирующая api и базу данных"""
+    # connecting to a database
+    db_session.global_init("data/db/main.db")
+    # доавляем api в приложение для использования в дальнейшем
+    # api для пользователей
+    api.add_resource(users_resources.UsersListResource, '/api/users')
+    api.add_resource(users_resources.UsersResource, '/api/users/<int:user_id>')
+    # api для игр
+    api.add_resource(games_resources.GamesListResource, '/api/games')
+    api.add_resource(games_resources.GamesResource, '/api/games/<int:game_id>')
+    app.run()  # запускаем приложение
 
 
-def add():
-    db_session.global_init('data/db/mars_one.db')
-    db_sess = db_session.create_session()
-    job = Games()
-    job.team_leader = 1
-    job.job = 'deployment of residential modules 1 and 2'
-    job.work_size = 15
-    job.collaborators = '2, 3'
-    job.start_date = datetime.datetime.now()
-    job.is_finished = False
-    db_sess.add(job)
-    db_sess.commit()
+@app.route("/", methods=['GET', 'POST'])
+def index():
+    """Функция зугружает главную страницу"""
+    form = searcher()  # форма для поиска
+    if form.__class__.__name__ != 'SearchForm':
+        return form
+    games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
+    spin_games = list(filter(lambda x: x['img_wide'] is not None and x['is_selling'], games))
+    random.shuffle(spin_games)
+    home_games = list(filter(lambda x: x['img'] is not None and x['is_selling'], games))
+    random.shuffle(home_games)
+    return flask.render_template("index.html", spin_games=spin_games[:3], home_games=home_games[:4],
+                                 form_s=form)
 
 
-def add1():
-    db_sess = db_session.create_session()
-    cap = User()
-    cap.surname = 'Scott'
-    cap.name = 'Ridley'
-    cap.age = 21
-    cap.position = 'captain'
-    cap.speciality = 'research engineer'
-    cap.address = 'module_1'
-    cap.email = 'scott_chief@mars.org'
-    db_sess.add(cap)
-    for i in range(5):
-        user = User()
-        user.surname = 'H' + 'a' * i + 'll'
-        user.name = 'Joe'
-        user.age = 18 + i * 3
-        user.position = 'recruit'
-        user.speciality = random.choice(['Pilot', 'Biologist', 'Mechanic', 'Astronomer', 'Programmer'])
-        user.address = f'module_{i + 1}'
-        user.email = f'{user.name}.{user.surname}@mars.org'
-        db_sess.add(user)
-    db_sess.commit()
+@app.route('/list', methods=['GET', 'POST'])
+def game_list():
+    """Функция загружает полный список игр"""
+    form = searcher()
+    if form.__class__.__name__ != 'SearchForm':
+        return form
+    games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
+    games_list = list(filter(lambda x: x['img'] is not None and x['is_selling'], games))
+    random.shuffle(games_list)
+    return flask.render_template('list.html', games_list=games_list, form_s=form)
 
 
-@login_manager.user_loader
-def load_user(user_id):
-    db_sess = db_session.create_session()
-    return db_sess.query(User).get(user_id)
+@app.route('/cart', methods=['GET', 'POST'])
+def cart():
+    """Функция загружает корзину"""
+    form = searcher()
+    if form.__class__.__name__ != 'SearchForm':
+        return form
+    ids = flask.session.get('cart', None)  # получаем значения из сессии
+    if ids is None:  # если в сессии пусто, то игры не выводим
+        cart_list = []
+    else:
+        games = requests.get('http://127.0.0.1:5000/api/games').json()['games']  # получем список игр
+        cart_list = list(filter(lambda x: x['id'] in ids and x['is_selling'], games))
+    return flask.render_template('cart.html', cart_list=cart_list, form_s=form)
+
+
+@app.route('/cart_delete/<int:id>', methods=['GET', 'POST'])
+def cart_delete(id):
+    """Функция удаляет из корзины игру по id"""
+    cart1 = flask.session.get('cart', None)
+    if cart1 is not None:
+        if id == 0:
+            cart1.clear()
+        else:
+            cart1.pop(flask.session['cart'].index(id))
+    else:
+        cart1 = []
+    flask.session['cart'] = cart1
+    return flask.redirect(redirect_url())
+
+
+def redirect_url(default='index'):
+    """Функция возвращает адрес, с которого мы пришли"""
+    return (request.args.get('next') or
+            request.referrer or
+            flask.url_for(default))
+
+
+@app.route('/cart_add/<int:id>', methods=['GET', 'POST'])
+def cart_add(id):
+    """Функция добавляет игру в корзину"""
+    cart1 = flask.session.get('cart', None)
+    if cart1 is None:
+        cart1 = [id]
+    elif id not in cart1:
+        cart1.append(id)
+    flask.session['cart'] = cart1
+    return flask.redirect('/cart')
+
+
+@app.route('/<int:game_id>', methods=['GET', 'POST'])
+def game(game_id):
+    """Функция загружает страницу игры"""
+    form = searcher()
+    if form.__class__.__name__ != 'SearchForm':
+        return form
+    sess = db_session.create_session()
+    res = requests.get(f'http://127.0.0.1:5000/api/games/{game_id}').json()['game']
+    if not res['is_selling'] and not current_user.admin:
+        return flask.abort(404)
+    res['genre'] = sess.query(Genres.genre).filter(res['genre'] == Genres.id).first()[0]
+    comments = sess.query(Comment).filter(Comment.game_id == game_id).all()
+    for i in comments:
+        i.username = sess.query(User.nick).filter(User.id == i.user_id).first()[0]
+        i.emailcom = sess.query(User.email).filter(User.id == i.user_id).first()[0]
+        i.avatarcom = User.comavatar(i.emailcom, 40)
+    return flask.render_template('product.html', game=res, form_s=form, comments=comments)
+
+
+@app.route('/add_comment/<int:game_id>', methods=['GET', 'POST'])
+@flask_login.login_required
+def add_comment(game_id):
+    """Функция добавляет комментарий через форму"""
+    form = commentform.CommentForm()
+    if request.method == 'POST':
+        sess = db_session.create_session()
+        comm = Comment(
+            body=form.body.data,
+            user_id=current_user.id,
+            game_id=game_id
+        )
+        sess.add(comm)
+        sess.commit()
+        return flask.redirect(f'/{game_id}')
+    return flask.render_template('comments.html', form=form)
 
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    form = LoginForm()
-    if form.validate_on_submit():
-        db_sess = db_session.create_session()
-        user = db_sess.query(User).filter(User.email == form.email.data).first()
-        if user and user.check_password(form.password.data):
-            flask_login.login_user(user, remember=form.remember_me.data)
-            return flask.redirect("/")
+    """Функция логирует пользователя"""
+    form = loginform.LoginForm()
+    db_sess = db_session.create_session()
+    user = db_sess.query(User).filter(User.email == form.email.data).first()
+    if not user or not user.check_password(form.password.data):
         return flask.render_template('login.html',
                                      message="Неправильный логин или пароль",
                                      form=form)
+    else:
+        flask_login.login_user(user, remember=form.remember_me.data)
+        return flask.redirect('/')
     return flask.render_template('login.html', title='Авторизация', form=form)
 
 
-@app.route('/logout')
-@flask_login.login_required
-def logout():
-    flask_login.logout_user()
-    return flask.redirect("/")
-
-
-@app.route("/")
-def index():
-    db_sess = db_session.create_session()
-    jobs = db_sess.query(Games).all()
-    return flask.render_template("index.html", jobs=jobs)
-
-
 @app.route('/register', methods=['GET', 'POST'])
-def reqister():
-    form = RegisterForm()
+def register():
+    """Функция регистрирует пользователя"""
+    form = registerform.RegisterForm()
     if form.validate_on_submit():
         if form.password.data != form.password_again.data:
             return flask.render_template('register.html', title='Регистрация',
@@ -109,92 +194,161 @@ def reqister():
                                          form=form,
                                          message="Такой пользователь уже есть")
         user = User(
-            name=form.name.data,
+            nick=form.nick.data,
             email=form.email.data,
-            about=form.about.data
         )
         user.set_password(form.password.data)
-        db_sess.add(user)
-        db_sess.commit()
+        requests.post('http://127.0.0.1:5000/api/users', data=user.to_dict())
         return flask.redirect('/login')
     return flask.render_template('register.html', title='Регистрация', form=form)
 
 
-@app.route('/jobs', methods=['GET', 'POST'])
+@app.route('/add_game', methods=['GET', 'POST'])
 @flask_login.login_required
-def add_news():
-    form = JobsForm()
-    if form.validate_on_submit():
-        db_sess = db_session.create_session()
-        jobs = Games()
-        jobs.job = form.job.data
-        jobs.team_leader = form.team_leader.data
-        jobs.work_size = form.work_size.data
-        jobs.collaborators = form.collaborators.data
-        jobs.start_date = form.start_date.data
-        jobs.end_date = form.end_date.data
-        jobs.is_finished = form.is_finished.data
-        flask_login.current_user.news.append(jobs)
-        db_sess.merge(flask_login.current_user)
-        db_sess.commit()
+def add_game():
+    """Функция загружает шаблон для добавления игры"""
+    if not current_user.admin:
         return flask.redirect('/')
-    return flask.render_template('jobs.html', title='Добавление работы',
-                                 form=form)
+    form = gameform.GameForm()
+    if request.method == 'POST':
+        games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
+        if form.name.data in list(map(lambda x: x['name'], games)):
+            return flask.render_template('add_game.html', error='Такое название уже есть', form=form)
+        genre = int(''.join(list(filter(lambda x: x.isdigit(), list(form.genre.data)))))
 
-
-@app.route('/news/<int:id>', methods=['GET', 'POST'])
-@flask_login.login_required
-def edit_news(id):
-    form = JobsForm()
-    if flask.request.method == "GET":
-        db_sess = db_session.create_session()
-        news = db_sess.query(Games).filter(Games.id == id,
-                                          Games.user == flask_login.current_user
-                                          ).first()
-        if news:
-            form.title.data = news.title
-            form.content.data = news.content
-            form.is_private.data = news.is_private
+        if form.img.data is not None:
+            filename = secure_filename(form.img.data.filename)
+            file_path = 'static/img/covers/' + filename
+            if os.access(file_path, os.F_OK):
+                return flask.render_template('add_game.html', error='Обложка уже есть', form=form)
+            form.img.data.save(file_path)
         else:
-            flask.abort(404)
-    if form.validate_on_submit():
-        db_sess = db_session.create_session()
-        news = db_sess.query(Games).filter(Games.id == id,
-                                          Games.user == flask_login.current_user
-                                          ).first()
-        if news:
-            news.title = form.title.data
-            news.content = form.content.data
-            news.is_private = form.is_private.data
-            db_sess.commit()
-            return flask.redirect('/')
+            file_path = None
+
+        if form.img_wide.data is not None:
+            filename_wide = secure_filename(form.img_wide.data.filename)
+            file_path_wide = 'static/img/wide/' + filename_wide
+            if os.access(file_path_wide, os.F_OK):
+                return flask.render_template('add_game.html', error='Широкая картинка уже есть', form=form)
+            form.img_wide.data.save(file_path_wide)
         else:
-            flask.abort(404)
-    return flask.render_template('jobs.html',
-                                 title='Редактирование новости',
-                                 form=form
-                                 )
+            file_path_wide = None
+
+        game = Game(
+            name=form.name.data,
+            ratio=form.ratio.data,
+            price=int(form.price.data),
+            description=form.description.data,
+            developers=form.developers.data,
+            release_date=form.release_date.data,
+            genre=genre,
+            img=file_path,
+            img_wide=file_path_wide
+        )
+        res = requests.post('http://127.0.0.1:5000/api/games', data=game.to_dict()).json()
+        if 'success' in res:
+            sess = db_session.create_session()
+            game_id = sess.query(Game.id).filter(Game.name == game.name).first()[0]
+            return flask.redirect(f'/{game_id}')
+
+    return flask.render_template('add_game.html', form=form)
 
 
-@app.route('/news_delete/<int:id>', methods=['GET', 'POST'])
+@app.route('/delete_game/<int:game_id>')
 @flask_login.login_required
-def news_delete(id):
-    db_sess = db_session.create_session()
-    news = db_sess.query(Games).filter(Games.id == id,
-                                      Games.user == flask_login.current_user
-                                      ).first()
-    if news:
-        db_sess.delete(news)
-        db_sess.commit()
-    else:
+def delete_game(game_id):
+    res = requests.delete(f'http://127.0.0.1:5000/api/games/{game_id}').json()
+    print(res)
+    return flask.redirect('/list')
+
+
+@app.route('/add_game/<int:game_id>')
+@flask_login.login_required
+def selling_game(game_id):
+    sess = db_session.create_session()
+    res = sess.query(Game).get(game_id)
+    if not res and not current_user.admin and not res:
         flask.abort(404)
-    return flask.redirect('/')
+    else:
+        res.is_selling = True
+    sess.commit()
+    return flask.redirect(f'/{game_id}')
+
+
+@app.route('/buy')
+@flask_login.login_required
+def buy():
+    """Функция загружает форму для покупки игр из корзины"""
+    ids = flask.session.get('cart', None)
+    if ids is not None and ids:
+        games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
+        cart_list = list(filter(lambda x: x['id'] in ids, games))
+        total = sum(list(map(lambda x: x['price'], cart_list)))
+        return flask.render_template('payment.html', cart_list=cart_list, total=total)
+
+
+@app.route('/goods')
+@flask_login.login_required
+def goods():
+    """Загружаем купленные игры с случайными кодами"""
+    ids = flask.session.get('cart', None)
+    if ids is not None:
+        games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
+        games = list(filter(lambda x: x['id'] in ids, games))
+        # перемешиваем список с буквами и числами и берём срез
+        text = list(string.ascii_uppercase + string.digits)
+        for i in range(len(games)):
+            random.shuffle(text)
+            games[i]['code'] = ''.join(text[:7])
+        cart_delete(0)
+        return flask.render_template('goods.html', games=games)
+
+
+def searcher():
+    """Функция возращает список игр с похожим названием на название из формы"""
+    form = searchform.SearchForm()
+    games = requests.get('http://127.0.0.1:5000/api/games').json()['games']
+    games_list = list(filter(lambda x: x['img'] is not None, games))
+    if request.method == 'POST':
+        matched_games = list(filter(lambda x: form.search.data.lower() in x['name'].lower(),
+                                    games_list))
+        matched_games.sort(key=lambda x: Levenshtein.distance(form.search.data, x['name']))
+        return flask.render_template('list.html', games_list=matched_games, form=form)
+    return form
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    db_sess = db_session.create_session()
+    return db_sess.query(User).get(user_id)
+
+
+@app.route('/logout')
+@flask_login.login_required
+def logout():
+    flask_login.logout_user()
+    return flask.redirect("/login")
+
+
+# хендлеры ошибок с кастомными страницами ошибок
+@app.errorhandler(401)
+def not_found(error):
+    return flask.render_template('unauthorised.html', code='401',
+                                 image='/static/img/brand/auth_icon.png'), 401
 
 
 @app.errorhandler(404)
 def not_found(error):
-    return flask.make_response(flask.jsonify({'error': 'Not found'}), 404)
+    return flask.render_template('error.html', error=str(error), code='404',
+                                 image='/static/img/brand/error_icon.png'), 404
+
+
+@app.errorhandler(500)
+def server_error(error):
+    return flask.render_template('error.html', error=str(error), code='500',
+                                 image='/static/img/brand/cloud_icon.png'), 500
 
 
 if __name__ == '__main__':
+    # запускаем приложение
     main()
