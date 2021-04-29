@@ -313,7 +313,7 @@ def searcher():
         matched_games = list(filter(lambda x: form.search.data.lower() in x['name'].lower(),
                                     games_list))
         matched_games.sort(key=lambda x: Levenshtein.distance(form.search.data, x['name']))
-        return flask.render_template('list.html', games_list=matched_games, form=form)
+        return flask.render_template('list.html', games_list=matched_games, form_s=form)
     return form
 
 
